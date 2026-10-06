@@ -1,0 +1,14 @@
+{
+  "name": "standoff",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["engine", "shared", "server", "client"],
+  "scripts": {
+    "test": "npm run test -w engine && npm run test -w server",
+    "sim": "npm run sim -w engine --",
+    "dev": "npm run dev -w server & npm run dev -w client",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "typecheck": "tsc -p engine && tsc -p server && tsc -p client"
+  }
+}
