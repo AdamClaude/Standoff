@@ -49,6 +49,7 @@ export class Room {
   lastActivity: number;
   private timer: NodeJS.Timeout | null = null;
   private botTimers = new Map<string, NodeJS.Timeout>();
+  private feintRolled = new Set<string>();
   private botRngState = 0;
   private chatId = 0;
   private seq = 0;
@@ -170,6 +171,7 @@ export class Room {
     this.seed = randomBytes(16).toString('hex');
     this.botRngState = parseInt(this.seed.slice(0, 8), 16);
     this.actions = [];
+    this.feintRolled.clear();
     this.state = createGame(
       this.seats.map(s => ({ id: s.playerId, name: s.name, avatar: s.avatar, isBot: s.isBot })),
       { seed: this.seed, settings: { powers: this.settings.powers, openVaults: this.settings.openVaults, noStandRule: this.settings.noStandRule } },
@@ -276,6 +278,7 @@ export class Room {
       if (!botControlled) continue;
       const key = `${seat.playerId}:${s.phaseSeq}`;
       if (this.botTimers.has(key)) continue;
+      if (s.phase === 'HOLD_UP' && p.alive && seat.botLevel !== 'EASY') this.scheduleFeint(seat.playerId, seat.botLevel, s.phaseSeq);
       const action = botAction(filterView(s, seat.playerId), seat.botLevel, this.rand);
       if (!action) continue;
       const delay = this.botDelay(s, action) * this.hooks.timeScale;
@@ -288,6 +291,30 @@ export class Room {
         if (fresh) this.dispatch(fresh);
       }, delay));
     }
+  }
+
+  /** Live mind games: some bots swing their gun to someone else late in the countdown. */
+  private scheduleFeint(playerId: PlayerId, level: BotLevel, seq: number) {
+    const key = `${playerId}:${seq}:feint`;
+    if (this.feintRolled.has(key)) return;
+    this.feintRolled.add(key);
+    const chance = level === 'SHARK' ? 0.45 : 0.2;
+    if (this.rand() > chance) return;
+    const budget = phaseDuration(this.settings.timers, 'HOLD_UP');
+    const delay = budget * (0.78 + this.rand() * 0.12) * this.hooks.timeScale;
+    this.botTimers.set(key, setTimeout(() => {
+      this.botTimers.delete(key);
+      const st = this.state;
+      if (!st || st.phaseSeq !== seq || st.phase !== 'HOLD_UP') return;
+      const me = st.players.find(x => x.id === playerId);
+      if (!me?.alive || !me.target) return;
+      const options = st.players.filter(x => x.alive && x.id !== playerId && x.id !== me.target);
+      if (options.length === 0) return;
+      // prefer swinging onto someone who is pointing at us
+      const threats = options.filter(x => x.target === playerId);
+      const pool = threats.length ? threats : options;
+      this.dispatch({ type: 'AIM', playerId, target: pool[Math.floor(this.rand() * pool.length)].id });
+    }, delay));
   }
 
   /** Human-ish think time; aims land inside the countdown so they look live. */
