@@ -396,7 +396,8 @@ button.round:hover { transform: translateY(-6px); border-color: var(--smoke-2); 
 .emoji-btn { font-size: 1.5rem; background: none; border: 0; padding: 4px; }
 .chat-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .chat-ticker {
-  position: fixed; top: calc(70px + env(safe-area-inset-top)); inset-inline-start: 12px; z-index: 5; margin: 0;
+  position: fixed; bottom: calc(150px + env(safe-area-inset-bottom)); left: 50%; translate: -50% 0; inset-inline-start: auto;
+  background: rgba(13, 11, 16, 0.85); padding: 4px 12px; border-radius: 999px; color: var(--lamp) !important; z-index: 5; margin: 0;
   max-width: 50vw; font-size: 0.78rem; color: var(--lamp-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
 }
 .rules-phases { padding-inline-start: 1.2em; display: grid; gap: 6px; margin: 0; }
@@ -465,3 +466,12 @@ button.round:hover { transform: translateY(-6px); border-color: var(--smoke-2); 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
+
+/* load-and-aim status: what you've locked so far */
+.choice-status { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.choice-status span {
+  font: 500 0.95rem var(--label); padding: 3px 12px; border-radius: 999px;
+  border: 1px dashed var(--smoke-2); color: var(--lamp-dim);
+}
+.choice-status span.is-set { border-style: solid; border-color: var(--gold); color: var(--lamp); }
+.choice-status b { font-weight: 700; }

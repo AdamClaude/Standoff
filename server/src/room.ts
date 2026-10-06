@@ -277,7 +277,6 @@ export class Room {
       if (!botControlled) continue;
       const key = `${seat.playerId}:${s.phaseSeq}`;
       if (this.botTimers.has(key)) continue;
-      if (s.phase === 'HOLD_UP' && p.alive && seat.botLevel !== 'EASY') this.scheduleFeint(seat.playerId, seat.botLevel, s.phaseSeq);
       const action = botAction(filterView(s, seat.playerId), seat.botLevel, this.rand);
       if (!action) continue;
       const delay = this.botDelay(s, action) * this.hooks.timeScale;
@@ -320,9 +319,9 @@ export class Room {
   private botDelay(s: GameState, a: Action): number {
     const budget = phaseDuration(this.settings.timers, s.phase as TimerKey);
     switch (a.type) {
-      case 'AIM': return budget * (0.2 + this.rand() * 0.55);
+      case 'AIM': return 600 + this.rand() * Math.max(800, budget * 0.45);
       case 'DECIDE': return budget * (0.25 + this.rand() * 0.5);
-      case 'LOAD': return 900 + this.rand() * 3500;
+      case 'LOAD': return 900 + this.rand() * Math.max(800, budget * 0.3);
       case 'PICK': return 700 + this.rand() * 1500;
       case 'DICTATE': return 300 + this.rand() * 600;
       default: return 800 + this.rand() * 1800;

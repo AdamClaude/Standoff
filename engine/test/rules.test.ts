@@ -54,20 +54,51 @@ describe('setup', () => {
 });
 
 describe('load & hold-up', () => {
-  it('rejects loading a card not in hand and double loads', () => {
+  it('rejects a card not in hand; choosing again swaps the bullet', () => {
     const s = newGame();
     tick(s);
     expect(err(() => apply(s, { type: 'LOAD', playerId: 'p0', cardId: P(s, 'p1').hand[0].id }))).toBe('NOT_IN_HAND');
-    apply(s, { type: 'LOAD', playerId: 'p0', cardId: P(s, 'p0').hand[0].id });
-    expect(err(() => apply(s, { type: 'LOAD', playerId: 'p0', cardId: P(s, 'p0').hand[0].id }))).toBe('ALREADY_LOADED');
+    const bang = P(s, 'p0').hand.find(c => c.kind === 'BANG')!;
+    const click = P(s, 'p0').hand.find(c => c.kind === 'CLICK')!;
+    apply(s, { type: 'LOAD', playerId: 'p0', cardId: bang.id });
+    apply(s, { type: 'LOAD', playerId: 'p0', cardId: click.id });
+    expect(P(s, 'p0').loaded!.id).toBe(click.id);
+    expect(P(s, 'p0').hand).toHaveLength(7);
+    expect(P(s, 'p0').hand.filter(c => c.kind === 'BANG')).toHaveLength(3);
   });
 
-  it('timeout auto-loads a CLICK', () => {
+  it('bullet and target are chosen in the same countdown; timeout auto-loads a CLICK and late players have no aim', () => {
     const s = newGame();
-    tick(s); tick(s);
-    expect(s.phase).toBe('HOLD_UP');
+    tick(s);
+    expect(s.phase).toBe('LOAD');
+    apply(s, { type: 'AIM', playerId: 'p1', target: 'p2' });
+    tick(s); // countdown ends
+    expect(s.phase).toBe('BOSS_PRIVILEGE');
     for (const p of s.players) expect(p.hand).toHaveLength(7);
     expect(s.players.every(p => p.hand.filter(c => c.kind === 'BANG').length === 3)).toBe(true);
+    expect(P(s, 'p1').target).toBe('p2');
+    expect(P(s, 'p0').target).toBeNull();
+    expect(err(() => apply(s, { type: 'AIM', playerId: 'p0', target: 'p1' }))).toBe('WRONG_PHASE');
+  });
+
+  it('locks as soon as everyone has a bullet and a target', () => {
+    const s = newGame();
+    loadAll(s);
+    expect(s.phase).toBe('LOAD');
+    for (const [a, b] of [['p0', 'p1'], ['p1', 'p2'], ['p2', 'p3']]) apply(s, { type: 'AIM', playerId: a, target: b });
+    expect(s.phase).toBe('LOAD');
+    apply(s, { type: 'AIM', playerId: 'p3', target: 'p0' });
+    expect(s.phase).not.toBe('LOAD');
+  });
+
+  it('other players’ aims are hidden until the countdown ends, then all revealed at once', () => {
+    const s = newGame();
+    loadAll(s);
+    apply(s, { type: 'AIM', playerId: 'p1', target: 'p2' });
+    expect(filterView(s, 'p0').players.find(p => p.id === 'p1')!.target).toBeNull();
+    expect(filterView(s, 'p1').players.find(p => p.id === 'p1')!.target).toBe('p2');
+    tick(s);
+    expect(filterView(s, 'p0').players.find(p => p.id === 'p1')!.target).toBe('p2');
   });
 
   it('cannot aim at yourself or the dead', () => {

@@ -4,8 +4,7 @@ import { getLang, powerName, t } from '../i18n';
 
 const PHASES_EN = [
   ['The loot', 'Eight items land in the crate, plus the Boss crown.'],
-  ['Chamber', 'Each gangster secretly chambers one round: BANG or CLICK. You get 3 BANGs and 5 CLICKs for the whole game, one per heist.'],
-  ['Draw', 'On the countdown, tap a rival to aim. Everyone sees the guns move. Too slow means your gun stays down.'],
+  ['Load and aim', 'One secret countdown: each gangster picks a bullet (BANG or CLICK) and a rival to aim at. You get 3 BANGs and 5 CLICKs for the whole game, one per heist. When the count ends every aim is revealed at once; bullets stay hidden until the showdown. No target by then means your gun stays down.'],
   ['Boss’s call', 'The Boss may order one gangster to aim at someone else.'],
   ['Hold or hit the floor', 'Second countdown. Hitting the floor keeps you safe but out of the split. Hesitate and you stay standing.'],
   ['Showdown', 'Shooters still standing fire at targets still standing. Every BANG wounds. Three wounds and you’re out.'],
@@ -13,8 +12,7 @@ const PHASES_EN = [
 ];
 const PHASES_AR = [
   ['الغنيمة', 'ثماني غنائم في الصندوق، ومعها تاج الزعيم.'],
-  ['التلقيم', 'كل واحد يلقّم رصاصة سرًّا: طلقة أو فارغة. لديك 3 طلقات و5 فارغات للعبة كلها.'],
-  ['التصويب', 'مع العدّ التنازلي اضغط على منافس لتصوّب. الجميع يرى المسدسات تتحرك. إن تأخرت يبقى مسدسك منخفضًا.'],
+  ['لقّم وصوّب', 'عدّ تنازلي سرّي: كل واحد يختار رصاصة (طلقة أو فارغة) ومنافسًا يصوّب عليه. لديك 3 طلقات و5 فارغات للعبة كلها. عند نهاية العدّ تظهر كل التصويبات معًا، وتبقى الرصاصات مخفية حتى المواجهة. من لم يختر هدفًا يبقى مسدسه منخفضًا.'],
   ['كلمة الزعيم', 'يمكن للزعيم أن يأمر واحدًا بالتصويب على غيره.'],
   ['اصمد أو انحنِ', 'عدّ تنازلي ثانٍ. الانحناء يحميك لكنه يخرجك من القسمة. إن ترددت تبقى واقفًا.'],
   ['المواجهة', 'يكشف الواقفون الذين أهدافهم واقفة. كل طلقة تجرح. ثلاثة جروح وتخرج.'],

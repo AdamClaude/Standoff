@@ -15,7 +15,7 @@ export interface TableProps {
   highlight?: string | null;
 }
 
-const LIVE = new Set(['HOLD_UP', 'KID_AIM', 'CUNNING_SWAP', 'BOSS_PRIVILEGE', 'REDIRECT', 'COURAGE']);
+const LIVE = new Set(['LOAD', 'HOLD_UP', 'KID_AIM', 'CUNNING_SWAP', 'BOSS_PRIVILEGE', 'REDIRECT', 'COURAGE']);
 const REVEAL = new Set(['SHOWDOWN', 'SPLIT', 'ROUND_END']);
 
 export function Table({ v, seatAction, lootAction, highlight }: TableProps) {

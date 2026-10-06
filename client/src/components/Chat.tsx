@@ -53,6 +53,14 @@ export function Chat({ onClose }: { onClose: () => void }) {
 export function ChatTicker() {
   const chat = useApp(s => s.chat);
   const last = chat[chat.length - 1];
-  if (!last) return null;
+  // Only players' lines, and only briefly, so it never sits on top of the event feed.
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!last?.from) { setVisible(false); return; }
+    setVisible(true);
+    const id = setTimeout(() => setVisible(false), 6000);
+    return () => clearTimeout(id);
+  }, [last?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!last || !visible) return null;
   return <p className="chat-ticker">{last.from ? <b>{last.name}: </b> : null}{last.taunt ? t(`taunt_${last.taunt}` as Key) : chatText(last.text)}</p>;
 }

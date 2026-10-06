@@ -24,10 +24,10 @@ export function loadAll(s: GameState, kinds: Record<PlayerId, BulletKind> = {}) 
   }
 }
 
-/** HOLD_UP: set aims, lock (timeout). Boss passes unless keepBoss. */
+/** Still in the LOAD countdown: set aims, then let the clock run out (unless everyone was ready). */
 export function aim(s: GameState, aims: Record<PlayerId, PlayerId | null>, opts: { bossPass?: boolean } = { bossPass: true }) {
   for (const [id, t] of Object.entries(aims)) apply(s, { type: 'AIM', playerId: id, target: t });
-  tick(s);
+  if (s.phase === 'LOAD') tick(s);
   if (opts.bossPass && s.phase === 'BOSS_PRIVILEGE') apply(s, { type: 'BOSS_PASS', playerId: s.bossId });
 }
 

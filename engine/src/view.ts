@@ -77,7 +77,8 @@ export function filterView(s: GameState, viewerId: PlayerId | null): ClientView 
       shotsFired: p.publicBangsRevealed,
       handCount: p.hand.length,
       hasLoaded: p.loaded !== null,
-      target: p.target,
+      // Aims are secret while players are choosing; everyone's is revealed together at lock.
+      target: self || s.phase !== 'LOAD' ? p.target : null,
       stance: self || STANCE_PUBLIC.includes(s.phase) ? p.stance : null,
       revealedCard: p.revealedCard,
       hitThisRound: p.hitThisRound,

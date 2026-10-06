@@ -28,7 +28,7 @@ export type TimerKey = Exclude<Phase, 'GAME_OVER'> | 'PENDING';
 
 const NORMAL: Record<TimerKey, number> = {
   LOOT_REVEAL: 5000,
-  LOAD: 15000,
+  LOAD: 12000,      // pick a bullet AND a target, secretly; '3… 2… 1… DRAW!'
   HOLD_UP: 4500,       // "3… 2… 1… AIM!"
   KID_AIM: 6000,
   CUNNING_SWAP: 6000,
@@ -44,7 +44,7 @@ const NORMAL: Record<TimerKey, number> = {
 export function phaseDuration(preset: TimerPreset, key: TimerKey): number {
   const base = NORMAL[key];
   // Countdowns stay snappy in every preset — speed is part of the game.
-  const countdown = key === 'HOLD_UP' || key === 'COURAGE';
+  const countdown = key === 'COURAGE';
   const scale = preset === 'FAST' ? (countdown ? 0.85 : 0.65) : preset === 'CHILL' ? (countdown ? 1.25 : 1.7) : 1;
   return Math.round(base * scale);
 }

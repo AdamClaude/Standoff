@@ -38,7 +38,7 @@ export function Game() {
     v.players.filter(p => p.alive && p.id !== m?.id && pred(p)).map(p => p.id);
 
   if (m?.alive && v.me) {
-    if (v.phase === 'HOLD_UP' && !(m.power === 'KID' && v.settings.powers)) {
+    if (v.phase === 'LOAD' && remaining > 0 && !(m.power === 'KID' && v.settings.powers)) {
       seatAction = {
         ids: others(),
         onPick: id => api.act({ type: 'AIM', target: v.me!.target === id ? null : id }),
@@ -64,7 +64,7 @@ export function Game() {
     }
   }
 
-  const countdown = (v.phase === 'HOLD_UP' || v.phase === 'COURAGE') ? Math.ceil(remaining / 1000) : null;
+  const countdown = (v.phase === 'LOAD' || v.phase === 'COURAGE') ? Math.ceil(remaining / 1000) : null;
   const threat = m && v.phase === 'COURAGE' ? gunsOn(v, m.id).length : 0;
 
   return (
@@ -137,7 +137,7 @@ function PhaseStamp({ v }: { v: ClientView }) {
     const p = prev.current;
     prev.current = v.phase;
     let s: string | null = null;
-    if (p === 'HOLD_UP' && v.phase !== 'HOLD_UP') s = 'AIM!';
+    if (p === 'LOAD' && v.phase !== 'LOAD') s = 'DRAW!';
     if (s) {
       setStamp(s);
       const id = setTimeout(() => setStamp(null), 900);
@@ -200,7 +200,7 @@ function useGameSounds(v: ClientView) {
     if (!v.viewerId) return;
     const on = gunsOn(v, v.viewerId).map(p => p.id);
     const newOnes = on.filter(id => !last.current.targetsOnMe.includes(id));
-    if (newOnes.length && (v.phase === 'HOLD_UP' || v.phase === 'REDIRECT' || v.phase === 'KID_AIM')) sfx.swoosh();
+    if (newOnes.length && v.phase !== 'LOAD' && v.phase !== 'SHOWDOWN') sfx.swoosh();
     last.current.targetsOnMe = on;
   });
 
@@ -211,7 +211,7 @@ function useGameSounds(v: ClientView) {
       const sec = Math.ceil(left / 1000);
       const app = getApp().game?.view;
       if (!app) return;
-      if ((app.phase === 'HOLD_UP' || app.phase === 'COURAGE') && sec !== last.current.second && sec > 0 && sec <= 3) {
+      if ((app.phase === 'LOAD' || app.phase === 'COURAGE') && sec !== last.current.second && sec > 0 && sec <= 3) {
         last.current.second = sec;
         sfx.tick();
       }

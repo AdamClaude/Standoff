@@ -35,26 +35,22 @@ export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
     case 'LOOT_REVEAL':
       return <div className="tray"><p className="tray-msg">{t('lootReveal', { n: v.round })}</p><HandSummary hand={hand} /></div>;
 
-    case 'LOAD':
-      if (v.me.loaded) return (
-        <div className="tray">
-          <p className="tray-msg">{t('loaded')}</p>
-          <div className="hand"><Bullet card={v.me.loaded} chosen /></div>
-        </div>
-      );
+    case 'LOAD': {
+      // One secret countdown: pick a bullet AND tap a rival. Both can change until the count ends.
+      const kid = m.power === 'KID' && v.settings.powers;
+      const all = [...(v.me.loaded ? [v.me.loaded] : []), ...hand];
       return (
         <div className="tray">
-          <p className="tray-msg">{t('loadPrompt')}</p>
-          <Hand cards={hand} onPick={c => { sfx.cock(); api.act({ type: 'LOAD', cardId: c.id }); }} />
-        </div>
-      );
-
-    case 'HOLD_UP': {
-      if (m.power === 'KID' && v.settings.powers) return <div className="tray"><p className="tray-msg">{t('kidWait')}</p></div>;
-      return (
-        <div className="tray">
-          <p className="tray-msg">{v.me.target ? t('aimingAt', { name: nameOf(v, v.me.target) }) : t('aimPrompt')}</p>
-          <LoadedChip card={v.me.loaded} />
+          <div className="choice-status" role="status">
+            <span className={v.me.loaded ? 'is-set' : ''}>{t('yourBullet')}: <b>{v.me.loaded ? v.me.loaded.kind : '—'}</b></span>
+            <span className={v.me.target || kid ? 'is-set' : ''}>{t('yourTarget')}: <b>{kid ? t('kidLater') : v.me.target ? nameOf(v, v.me.target) : '—'}</b></span>
+          </div>
+          <p className="tray-msg">{t('drawPrompt')}</p>
+          <Hand
+            cards={all}
+            chosenId={v.me.loaded?.id}
+            onPick={c => { if (c.id !== v.me!.loaded?.id) { sfx.cock(); api.act({ type: 'LOAD', cardId: c.id }); } }}
+          />
         </div>
       );
     }
@@ -222,12 +218,12 @@ export function doPick(v: ClientView, id: string, tray: TrayState) {
 
 export { NEW_BOSS_TOKEN };
 
-function Hand({ cards, onPick, label }: { cards: BulletCard[]; onPick: (c: BulletCard) => void; label?: string }) {
-  // Show BANGs first, then CLICKs; one button per card.
-  const sorted = [...cards].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'BANG' ? -1 : 1));
+function Hand({ cards, onPick, label, chosenId }: { cards: BulletCard[]; onPick: (c: BulletCard) => void; label?: string; chosenId?: string }) {
+  // Show BANGs first, then CLICKs; one button per card. Ids are opaque, so order by kind only.
+  const sorted = [...cards].sort((a, b) => (a.kind === b.kind ? a.id.localeCompare(b.id) : a.kind === 'BANG' ? -1 : 1));
   return (
     <div className="hand">
-      {sorted.map(c => <Bullet key={c.id} card={c} onClick={() => onPick(c)} label={label} />)}
+      {sorted.map(c => <Bullet key={c.id} card={c} onClick={() => onPick(c)} label={label} chosen={c.id === chosenId} />)}
     </div>
   );
 }

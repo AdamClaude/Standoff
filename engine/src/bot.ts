@@ -52,7 +52,11 @@ export function botAction(v: ClientView, level: BotLevel, rand: Rand): Action | 
 
   switch (v.phase) {
     case 'LOAD': {
-      if (v.me.loaded || v.me.hand.length === 0) return null;
+      // Choose the bullet first, then the target (both stay secret until the countdown ends).
+      if (v.me.loaded || v.me.hand.length === 0) {
+        if (v.me.target || (me.power === 'KID' && v.settings.powers)) return null;
+        return { type: 'AIM', playerId: meId, target: chooseTarget(v, me, others, level, rand) };
+      }
       const bangs = v.me.hand.filter(c => c.kind === 'BANG');
       const clicks = v.me.hand.filter(c => c.kind === 'CLICK');
       const roundsLeft = v.rounds - v.round + 1;
@@ -65,12 +69,6 @@ export function botAction(v: ClientView, level: BotLevel, rand: Rand): Action | 
       }
       const wantBang = bangs.length > 0 && (clicks.length === 0 || rand() < pBang);
       return { type: 'LOAD', playerId: meId, cardId: (wantBang ? bangs : clicks)[0].id };
-    }
-
-    case 'HOLD_UP': {
-      if (me.power === 'KID' && v.settings.powers) return null;
-      if (v.me.target) return null; // already aimed; server may re-poll for feints
-      return { type: 'AIM', playerId: meId, target: chooseTarget(v, me, others, level, rand) };
     }
 
     case 'KID_AIM': {

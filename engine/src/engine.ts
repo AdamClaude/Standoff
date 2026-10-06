@@ -148,22 +148,24 @@ export function apply(s: GameState, a: Action): void {
 
     case 'LOAD': {
       need(s, 'LOAD');
+      // Bullet and target are chosen together, secretly, and can be changed until the countdown ends.
       const p = livePlayer(s, a.playerId);
-      if (p.loaded) throw new GameError('ALREADY_LOADED');
       const i = p.hand.findIndex(c => c.id === a.cardId);
       if (i < 0) throw new GameError('NOT_IN_HAND');
-      p.loaded = p.hand.splice(i, 1)[0];
-      s.log.push({ t: 'LOADED', round: s.round, playerId: p.id, card: p.loaded.kind, private: true });
-      if (alive(s).every(x => x.loaded || x.hand.length === 0)) advanceFromLoad(s);
+      const card = p.hand.splice(i, 1)[0];
+      if (p.loaded) p.hand.push(p.loaded); // swap back the previously chosen bullet
+      p.loaded = card;
+      maybeLockEarly(s);
       return;
     }
 
     case 'AIM': {
-      need(s, 'HOLD_UP');
+      need(s, 'LOAD');
       const p = livePlayer(s, a.playerId);
       if (hasPower(s, p, 'KID')) throw new GameError('NOT_ALLOWED', 'the Kid aims after everyone else');
       if (a.target !== null) validTarget(s, p, a.target);
       p.target = a.target;
+      maybeLockEarly(s);
       return;
     }
 
@@ -314,15 +316,8 @@ function onTimeout(s: GameState) {
       powers.onRoundStart(s);
       return;
     case 'LOAD':
-      for (const p of alive(s)) {
-        if (p.loaded || p.hand.length === 0) continue;
-        const i = Math.max(0, p.hand.findIndex(c => c.kind === 'CLICK'));
-        p.loaded = p.hand.splice(i, 1)[0];
-        s.log.push({ t: 'LOADED', round: s.round, playerId: p.id, card: p.loaded.kind, private: true });
-      }
-      return advanceFromLoad(s);
-    case 'HOLD_UP':
-      return lockAims(s);
+    case 'HOLD_UP': // legacy phase, no longer entered
+      return lockLoadAndAim(s);
     case 'KID_AIM': {
       const kid = alive(s).find(p => hasPower(s, p, 'KID'));
       if (kid) s.log.push({ t: 'POWER', round: s.round, playerId: kid.id, power: 'KID', text: 'was too slow to aim' });
@@ -354,9 +349,23 @@ function onTimeout(s: GameState) {
   }
 }
 
-function advanceFromLoad(s: GameState) {
-  for (const p of s.players) p.target = null;
-  setPhase(s, 'HOLD_UP');
+/** Countdown over (or everyone ready): fix every bullet and aim, then reveal all aims at once. */
+function lockLoadAndAim(s: GameState) {
+  for (const p of alive(s)) {
+    if (!p.loaded && p.hand.length > 0) {
+      // Too slow to choose a bullet: a CLICK goes in (and a late gun has no target anyway).
+      const i = Math.max(0, p.hand.findIndex(c => c.kind === 'CLICK'));
+      p.loaded = p.hand.splice(i, 1)[0];
+    }
+    if (p.loaded) s.log.push({ t: 'LOADED', round: s.round, playerId: p.id, card: p.loaded.kind, private: true });
+  }
+  lockAims(s);
+}
+
+/** Everyone alive has chosen both a bullet and a target: no need to wait for the clock. */
+function maybeLockEarly(s: GameState) {
+  const ready = alive(s).every(p => (p.loaded || p.hand.length === 0) && (p.target !== null || hasPower(s, p, 'KID')));
+  if (ready) lockLoadAndAim(s);
 }
 
 function lockAims(s: GameState) {
