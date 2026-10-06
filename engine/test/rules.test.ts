@@ -19,6 +19,13 @@ describe('setup', () => {
     }
   });
 
+  it('bullet ids are opaque and unique', () => {
+    const s = newGame(6);
+    const ids = s.players.flatMap(p => p.hand.map(c => c.id));
+    expect(new Set(ids).size).toBe(48);
+    for (const id of ids) expect(id).toMatch(/^k\d+$/);
+  });
+
   it('builds the exact 64-card loot deck, 8 piles of 8', () => {
     const deck = buildLootDeck();
     expect(deck).toHaveLength(64);
@@ -50,9 +57,9 @@ describe('load & hold-up', () => {
   it('rejects loading a card not in hand and double loads', () => {
     const s = newGame();
     tick(s);
-    expect(err(() => apply(s, { type: 'LOAD', playerId: 'p0', cardId: 'p1-B0' }))).toBe('NOT_IN_HAND');
-    apply(s, { type: 'LOAD', playerId: 'p0', cardId: 'p0-B0' });
-    expect(err(() => apply(s, { type: 'LOAD', playerId: 'p0', cardId: 'p0-B1' }))).toBe('ALREADY_LOADED');
+    expect(err(() => apply(s, { type: 'LOAD', playerId: 'p0', cardId: P(s, 'p1').hand[0].id }))).toBe('NOT_IN_HAND');
+    apply(s, { type: 'LOAD', playerId: 'p0', cardId: P(s, 'p0').hand[0].id });
+    expect(err(() => apply(s, { type: 'LOAD', playerId: 'p0', cardId: P(s, 'p0').hand[0].id }))).toBe('ALREADY_LOADED');
   });
 
   it('timeout auto-loads a CLICK', () => {

@@ -43,11 +43,10 @@ function freshStats() {
   return { bangsFired: 0, ducks: 0, aimsSurvived: 0, bluffs: 0, hits: 0 };
 }
 
-function makeHand(pid: PlayerId): BulletCard[] {
-  const hand: BulletCard[] = [];
-  for (let i = 0; i < 3; i++) hand.push({ id: `${pid}-B${i}`, kind: 'BANG' });
-  for (let i = 0; i < 5; i++) hand.push({ id: `${pid}-C${i}`, kind: 'CLICK' });
-  return hand;
+/** Bullet ids are opaque ("k17") so an id never reveals a card's kind or original owner. */
+function makeHand(ids: number[]): BulletCard[] {
+  const kinds: ('BANG' | 'CLICK')[] = ['BANG', 'BANG', 'BANG', 'CLICK', 'CLICK', 'CLICK', 'CLICK', 'CLICK'];
+  return kinds.map((kind, i) => ({ id: `k${ids[i]}`, kind }));
 }
 
 /** Cards still to be claimed this split (loot ids + the New Boss token). */
@@ -82,9 +81,10 @@ export function createGame(newPlayers: NewPlayer[], opts: CreateOptions): GameSt
   const lootPiles: LootCard[][] = [];
   for (let r = 0; r < 8; r++) lootPiles.push(deck.slice(r * 8, r * 8 + 8));
 
+  const bulletIds = shuffle(rng, Array.from({ length: newPlayers.length * 8 }, (_, i) => i));
   const players: Player[] = newPlayers.map((np, seat) => ({
     id: np.id, seat, name: np.name, avatar: np.avatar, isBot: !!np.isBot,
-    hand: makeHand(np.id), loaded: null, target: null, stance: null,
+    hand: makeHand(bulletIds.slice(seat * 8, seat * 8 + 8)), loaded: null, target: null, stance: null,
     wounds: 0, alive: true, loot: [], power: null,
     publicBangsRevealed: 0, stats: freshStats(),
     hitThisRound: 0, revealedCard: null, inSplit: false,
