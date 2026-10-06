@@ -178,7 +178,7 @@ export class Room {
     for (const seat of this.seats) {
       if (!seat.isBot && seat.socketIds.size === 0 && seat.disconnectedAt && this.settings.botTakeover) seat.takenOverByBot = true;
     }
-    this.chat.push(this.system('The doors are locked. Nobody leaves until the loot is split.'));
+    this.chat.push(this.system('@doorsLocked'));
     this.hooks.sendChat(this.chat[this.chat.length - 1]);
     this.afterChange(-1);
     return null;
@@ -310,7 +310,7 @@ export class Room {
   }
 
   addChat(from: SeatState | null, text: string, taunt?: string): ChatMessage {
-    const msg: ChatMessage = { id: ++this.chatId, from: from?.playerId ?? null, name: from?.name ?? 'Spectator', text: clean(text, 200), taunt, at: this.hooks.now() };
+    const msg: ChatMessage = { id: ++this.chatId, from: from?.playerId ?? null, name: from?.name ?? 'Spectator', text: clean(text, 200).replace(/^@+/, ''), taunt, at: this.hooks.now() };
     this.chat.push(msg);
     if (this.chat.length > 200) this.chat.shift();
     return msg;

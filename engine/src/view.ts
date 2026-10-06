@@ -55,7 +55,7 @@ export interface ClientView {
   pending: PendingChoice | null;
   dictate: { by: PlayerId; on: PlayerId; kind: LootKind | 'NEW_BOSS' } | null;
   discardSummary: { faceUpBang: number; faceUpClick: number; faceDown: number };
-  me: { hand: BulletCard[]; loaded: BulletCard | null; stance: Stance | null; target: PlayerId | null } | null;
+  me: { hand: BulletCard[]; loaded: BulletCard | null; stance: Stance | null; target: PlayerId | null; splitPicks: string[] } | null;
   log: GameEvent[];
   scores: ScoreLine[] | null;
   winners: PlayerId[] | null;
@@ -122,6 +122,7 @@ export function filterView(s: GameState, viewerId: PlayerId | null): ClientView 
       loaded: viewer.loaded ? { ...viewer.loaded } : null,
       stance: viewer.stance,
       target: viewer.target,
+      splitPicks: s.phase === 'SPLIT' ? [...viewer.splitPicks] : [],
     } : null,
     log: structuredClone(log),
     scores: s.scores,

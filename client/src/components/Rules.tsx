@@ -1,0 +1,60 @@
+import type { ClientView } from '@standoff/engine';
+import { PAINTING_VALUES, POWER_TEXT } from '@standoff/engine';
+import { getLang, powerName, t } from '../i18n';
+
+const PHASES_EN = [
+  ['The loot', 'Eight items land in the crate, plus the Boss crown.'],
+  ['Chamber', 'Each gangster secretly chambers one round: BANG or CLICK. You get 3 BANGs and 5 CLICKs for the whole game, one per heist.'],
+  ['Draw', 'On the countdown, tap a rival to aim. Everyone sees the guns move. Too slow means your gun stays down.'],
+  ['Boss’s call', 'The Boss may order one gangster to aim at someone else.'],
+  ['Hold or hit the floor', 'Second countdown. Hitting the floor keeps you safe but out of the split. Hesitate and you stay standing.'],
+  ['Showdown', 'Shooters still standing fire at targets still standing. Every BANG wounds. Three wounds and you’re out.'],
+  ['The split', 'From the Boss, going clockwise, everyone still standing and unhurt grabs one item at a time until the crate is empty.'],
+];
+const PHASES_AR = [
+  ['الغنيمة', 'ثماني غنائم في الصندوق، ومعها تاج الزعيم.'],
+  ['التلقيم', 'كل واحد يلقّم رصاصة سرًّا: طلقة أو فارغة. لديك 3 طلقات و5 فارغات للعبة كلها.'],
+  ['التصويب', 'مع العدّ التنازلي اضغط على منافس لتصوّب. الجميع يرى المسدسات تتحرك. إن تأخرت يبقى مسدسك منخفضًا.'],
+  ['كلمة الزعيم', 'يمكن للزعيم أن يأمر واحدًا بالتصويب على غيره.'],
+  ['اصمد أو انحنِ', 'عدّ تنازلي ثانٍ. الانحناء يحميك لكنه يخرجك من القسمة. إن ترددت تبقى واقفًا.'],
+  ['المواجهة', 'يكشف الواقفون الذين أهدافهم واقفة. كل طلقة تجرح. ثلاثة جروح وتخرج.'],
+  ['القسمة', 'من الزعيم مع عقارب الساعة، يأخذ كل واقف سليم غنيمة واحدة بالدور حتى يفرغ الصندوق.'],
+];
+
+export function Rules({ v, onClose }: { v: ClientView; onClose: () => void }) {
+  const phases = getLang() === 'ar' ? PHASES_AR : PHASES_EN;
+  const powers = v.players.filter(p => p.power).map(p => p.power!);
+  return (
+    <aside className="sheet rules" role="dialog" aria-label={t('rules')}>
+      <div className="sheet-body">
+        <header className="sheet-head">
+          <h2>{t('rules')}</h2>
+          <button className="btn-link" onClick={onClose}>{t('close')}</button>
+        </header>
+        <ol className="rules-phases">
+          {phases.map(([h, d]) => <li key={h}><b>{h}</b> {d}</li>)}
+        </ol>
+        <h3>{t('paintings')}</h3>
+        <table className="paint-table">
+          <tbody>
+            <tr>{PAINTING_VALUES.slice(1).map((_, i) => <th key={i}>{i + 1}</th>)}</tr>
+            <tr>{PAINTING_VALUES.slice(1).map((val, i) => <td key={i}>{val / 1000}k</td>)}</tr>
+          </tbody>
+        </table>
+        <p className="small">
+          {getLang() === 'ar'
+            ? 'النقود: 15×5k، 15×10k، 10×20k. ألماس: 5×1k، 3×5k، 1×10k؛ صاحب أكثر عدد من الألماس يربح 60k (التعادل = لا أحد). 3 مخازن، 2 إسعاف. فقط الأحياء يُحسبون. التعادل يُكسر بأكثر الجروح.'
+            : 'Cash: 15×5k, 15×10k, 10×20k. Diamonds: 5×1k, 3×5k, 1×10k; most diamonds (by count) earns a 60k bonus (tie = nobody). 3 clips, 2 first-aid kits. Only the living score. Ties go to whoever took more wounds. House rules: if the Boss dies the crown passes clockwise; if nobody stands the loot follows the hideout’s house rule.'}
+        </p>
+        {powers.length > 0 && (
+          <>
+            <h3>{t('powers')}</h3>
+            <dl className="powers-list">
+              {powers.map(p => <div key={p}><dt>{powerName(p)}</dt><dd>{POWER_TEXT[p]}</dd></div>)}
+            </dl>
+          </>
+        )}
+      </div>
+    </aside>
+  );
+}
