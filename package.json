@@ -2,13 +2,19 @@
   "name": "standoff",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["engine", "shared", "server", "client"],
+  "workspaces": [
+    "engine",
+    "shared",
+    "server",
+    "client"
+  ],
   "scripts": {
     "test": "npm run test -w engine && npm run test -w server",
     "sim": "npm run sim -w engine --",
     "dev": "npm run dev -w server & npm run dev -w client",
     "build": "npm run build -w client",
     "start": "npm run start -w server",
-    "typecheck": "tsc -p engine && tsc -p server && tsc -p client"
+    "typecheck": "tsc -p engine && tsc -p server && tsc -p client",
+    "build:practice": "cd client && VITE_OFFLINE=1 npx vite build --base ./ --outDir dist-offline && python3 build-practice.py dist-offline/standoff-practice.html"
   }
 }

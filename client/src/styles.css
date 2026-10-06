@@ -74,7 +74,7 @@ button { cursor: pointer; }
 .chip.is-on { background: var(--lamp); color: var(--ink); }
 
 /* ── home ────────────────────────────────────────────────── */
-.home { min-height: 100%; display: grid; place-items: start center; padding: 0 var(--gutter) 40px; }
+.home { min-height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; padding: 0 var(--gutter) 40px; }
 .home-hero { position: relative; text-align: center; padding: 56px 0 28px; width: 100%; max-width: 560px; }
 .lamp {
   position: absolute; inset: -40px 0 auto; height: 420px; pointer-events: none;
@@ -94,7 +94,8 @@ button { cursor: pointer; }
   text-shadow: 0 0 1px var(--lamp), 4px 4px 0 var(--bang);
 }
 .tagline { position: relative; margin: 0 auto; max-width: 32ch; color: var(--lamp-dim); font-size: 1.05rem; }
-.home-card { width: 100%; max-width: 560px; display: grid; gap: 22px; }
+.home-card { width: 100%; max-width: 560px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.home-card > * { min-width: 0; }
 .field { display: grid; gap: 6px; }
 .field span, .char-picker legend { font: 600 1rem var(--label); color: var(--lamp-dim); }
 .field input, .code-input, .chat-form input {

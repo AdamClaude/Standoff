@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { RoomSettings } from '@standoff/shared';
-import { api, useApp } from '../net';
+import { api, OFFLINE, useApp } from '../net';
 import { t, useLang, type Key } from '../i18n';
 import { Avatar } from './Avatar';
 
@@ -15,7 +15,7 @@ export function Lobby() {
   const link = lobby ? `${location.origin}/?room=${lobby.code}` : '';
 
   useEffect(() => {
-    if (link) QRCode.toDataURL(link, { margin: 1, width: 220, color: { dark: '#16131a', light: '#f3e6c4' } }).then(setQr);
+    if (link && !OFFLINE) QRCode.toDataURL(link, { margin: 1, width: 220, color: { dark: '#16131a', light: '#f3e6c4' } }).then(setQr);
   }, [link]);
 
   if (!lobby) return <main className="lobby"><p className="muted">…</p></main>;
@@ -38,14 +38,14 @@ export function Lobby() {
         <button className="btn-link" onClick={() => api.leave()}>{t('leave')}</button>
       </header>
 
-      <section className="invite">
+      {OFFLINE ? <p className="muted">{t('practiceNote')}</p> : <section className="invite">
         {qr && <img src={qr} alt="" width={132} height={132} className="qr" />}
         <div>
           <p>{t('invite')}</p>
           <p className="big-code" aria-label={t('roomCode')}>{lobby.code}</p>
           <button className="btn btn-small" onClick={copy}>{copied ? t('copied') : t('copyLink')}</button>
         </div>
-      </section>
+      </section>}
 
       <section className="seats">
         <h2>{t('seats')} <span className="muted">{lobby.seats.length}/{s.maxPlayers}</span></h2>

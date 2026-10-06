@@ -11,6 +11,8 @@ export interface TrayState {
   setGreedyFirst: (id: string | null) => void;
   greedyMode: boolean;
   setGreedyMode: (b: boolean) => void;
+  armed: string | null;            // item tapped once after a 'this would be wasted' warning
+  setArmed: (id: string | null) => void;
 }
 
 export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
@@ -212,7 +214,8 @@ export function doPick(v: ClientView, id: string, tray: TrayState) {
     return;
   }
   const warn = pickWarning(v, id);
-  if (warn && !confirm(warn)) return;
+  if (warn && tray.armed !== id) { tray.setArmed(id); api.toast(warn + ' ' + t('tapAgain')); return; }
+  tray.setArmed(null);
   sfx.cash();
   api.act({ type: 'PICK', itemId: id });
 }

@@ -1,9 +1,10 @@
+import { store } from './storage';
 // All sounds are synthesised with Web Audio — no audio files, nothing to license.
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
-let volume = Number(localStorage.getItem('standoff.volume') ?? '0.7');
-let muted = localStorage.getItem('standoff.muted') === '1';
+let volume = Number(store.get('standoff.volume') ?? '0.7');
+let muted = store.get('standoff.muted') === '1';
 
 function ac(): AudioContext | null {
   if (muted) return null;
@@ -21,9 +22,9 @@ function ac(): AudioContext | null {
 
 export const sound = {
   get muted() { return muted; },
-  setMuted(m: boolean) { muted = m; localStorage.setItem('standoff.muted', m ? '1' : '0'); },
+  setMuted(m: boolean) { muted = m; store.set('standoff.muted', m ? '1' : '0'); },
   get volume() { return volume; },
-  setVolume(v: number) { volume = v; localStorage.setItem('standoff.volume', String(v)); if (master) master.gain.value = v; },
+  setVolume(v: number) { volume = v; store.set('standoff.volume', String(v)); if (master) master.gain.value = v; },
   unlock() { ac(); },
 };
 

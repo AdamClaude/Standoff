@@ -1,5 +1,7 @@
+import { store } from './storage';
 // Socket connection + app store (tiny external store, no framework).
 import { io, type Socket } from 'socket.io-client';
+import { createLocalSocket } from './local';
 import { useSyncExternalStore } from 'react';
 import type {
   Ack, ChatMessage, ClientToServer, GameMessage, Intent, JoinReply, LobbyView, RoomSettings, ServerToClient, TauntKey,
@@ -33,27 +35,31 @@ export function useApp<T>(sel: (s: AppState) => T): T {
 }
 export const getApp = () => state;
 
-const socket: Socket<ServerToClient, ClientToServer> = io({ transports: ['websocket', 'polling'] });
+/** Practice build: the server runs inside the page against bots. */
+export const OFFLINE = import.meta.env.VITE_OFFLINE === '1';
+const socket: Socket<ServerToClient, ClientToServer> = OFFLINE
+  ? (createLocalSocket() as unknown as Socket<ServerToClient, ClientToServer>)
+  : io({ transports: ['websocket', 'polling'] });
 
 // ── persistence of seats for reconnection ──
 const SEATS_KEY = 'standoff.seats';
 function savedSeat(code: string): { token: string } | null {
-  try { return JSON.parse(localStorage.getItem(SEATS_KEY) || '{}')[code] ?? null; } catch { return null; }
+  try { return JSON.parse(store.get(SEATS_KEY) || '{}')[code] ?? null; } catch { return null; }
 }
 function saveSeat(code: string, token: string | undefined) {
   try {
-    const all = JSON.parse(localStorage.getItem(SEATS_KEY) || '{}');
+    const all = JSON.parse(store.get(SEATS_KEY) || '{}');
     if (token) all[code] = { token, at: Date.now() }; else delete all[code];
-    localStorage.setItem(SEATS_KEY, JSON.stringify(all));
-    localStorage.setItem('standoff.lastRoom', code);
+    store.set(SEATS_KEY, JSON.stringify(all));
+    store.set('standoff.lastRoom', code);
   } catch { /* ignore */ }
 }
 
 export const profile = {
-  get name() { return localStorage.getItem('standoff.name') || ''; },
-  set name(v: string) { localStorage.setItem('standoff.name', v); },
-  get avatar() { return localStorage.getItem('standoff.avatar') || 'rico'; },
-  set avatar(v: string) { localStorage.setItem('standoff.avatar', v); },
+  get name() { return store.get('standoff.name') || ''; },
+  set name(v: string) { store.set('standoff.name', v); },
+  get avatar() { return store.get('standoff.avatar') || 'rico'; },
+  set avatar(v: string) { store.set('standoff.avatar', v); },
 };
 
 // ── clock sync: keep the best (lowest RTT) offset sample ──
@@ -112,7 +118,7 @@ function onJoined(r: JoinReply) {
   set({ session: { code: r.code, playerId: r.playerId ?? null, token: r.token ?? null, spectator: !!r.spectator }, game: null });
   const url = new URL(location.href);
   url.searchParams.set('room', r.code);
-  history.replaceState(null, '', url);
+  try { history.replaceState(null, '', url); } catch { /* sandboxed */ }
   return true;
 }
 
@@ -122,6 +128,7 @@ export const api = {
       const ok = onJoined(r);
       set({ tutorial });
       if (ok && tutorial) socket.emit('room:start', { tutorial: true }, () => {});
+      else if (ok && OFFLINE) for (let i = 0; i < 4; i++) socket.emit('room:addBot', () => {});
       res(ok);
     }));
   },
@@ -138,7 +145,7 @@ export const api = {
     if (state.session) saveSeat(state.session.code, undefined);
     const url = new URL(location.href);
     url.searchParams.delete('room');
-    history.replaceState(null, '', url);
+    try { history.replaceState(null, '', url); } catch { /* sandboxed */ }
     set({ session: null, lobby: null, game: null, chat: [], tutorial: false });
   },
   settings(p: Partial<RoomSettings>) { socket.emit('room:settings', p, () => {}); },
@@ -156,4 +163,5 @@ export const api = {
   taunt(taunt: TauntKey) { socket.emit('chat:send', { taunt }); },
   react(emoji: string) { socket.emit('react', emoji); },
   clearToast() { set({ toast: null }); },
+  toast(msg: string) { set({ toast: msg }); },
 };

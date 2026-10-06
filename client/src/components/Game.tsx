@@ -1,3 +1,4 @@
+import { store } from '../storage';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ClientView, GameEvent, PublicPlayer } from '@standoff/engine';
 import { api, getApp, serverNow, useApp } from '../net';
@@ -18,9 +19,10 @@ export function Game() {
   const m = me(v);
   const [greedyFirst, setGreedyFirst] = useState<string | null>(null);
   const [greedyMode, setGreedyMode] = useState(false);
-  const tray: TrayState = { greedyFirst, setGreedyFirst, greedyMode, setGreedyMode };
+  const [armed, setArmed] = useState<string | null>(null);
+  const tray: TrayState = { greedyFirst, setGreedyFirst, greedyMode, setGreedyMode, armed, setArmed };
   const [panel, setPanel] = useState<'none' | 'rules' | 'chat' | 'menu'>('none');
-  const [reduced, setReduced] = useState(() => localStorage.getItem('standoff.reducedMotion') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [reduced, setReduced] = useState(() => store.get('standoff.reducedMotion') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', reduced); }, [reduced]);
 
   useGameSounds(v);
@@ -114,7 +116,7 @@ export function Game() {
             </label>
             <label className="setting toggle">
               <span className="setting-label">{t('motion')}</span>
-              <input type="checkbox" checked={reduced} onChange={e => { setReduced(e.target.checked); localStorage.setItem('standoff.reducedMotion', e.target.checked ? '1' : '0'); }} />
+              <input type="checkbox" checked={reduced} onChange={e => { setReduced(e.target.checked); store.set('standoff.reducedMotion', e.target.checked ? '1' : '0'); }} />
               <span className="switch" aria-hidden="true" />
             </label>
             <button className="btn" onClick={() => setLang(getLang() === 'ar' ? 'en' : 'ar')}>{t('language')}</button>

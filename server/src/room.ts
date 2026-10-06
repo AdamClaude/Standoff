@@ -1,6 +1,5 @@
 // One room = one table. Wraps the pure engine with timers, seats, bots and broadcasting.
 
-import { randomBytes } from 'node:crypto';
 import {
   botAction, createGame, filterView, GameError, reduce,
   type Action, type BotLevel, type GameState, type PlayerId,
@@ -47,8 +46,8 @@ export class Room {
   chat: ChatMessage[] = [];
   tutorial = false;
   lastActivity: number;
-  private timer: NodeJS.Timeout | null = null;
-  private botTimers = new Map<string, NodeJS.Timeout>();
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private botTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private feintRolled = new Set<string>();
   private botRngState = 0;
   private chatId = 0;
@@ -63,7 +62,7 @@ export class Room {
   addHuman(name: string, avatar: string): SeatState {
     const seat: SeatState = {
       playerId: `h${++this.seq}`, name: clean(name) || 'Stranger', avatar: validAvatar(avatar),
-      token: randomBytes(16).toString('hex'), isBot: false, botLevel: this.settings.botLevel,
+      token: randomHex(16), isBot: false, botLevel: this.settings.botLevel,
       socketIds: new Set(), disconnectedAt: null, takenOverByBot: false,
     };
     this.seats.push(seat);
@@ -168,7 +167,7 @@ export class Room {
     }
     if (this.seats.length < 3) return 'need at least 3 players (add bots to fill seats)';
     if (this.seats.length > 8) return 'at most 8 players';
-    this.seed = randomBytes(16).toString('hex');
+    this.seed = randomHex(16);
     this.botRngState = parseInt(this.seed.slice(0, 8), 16);
     this.actions = [];
     this.feintRolled.clear();
@@ -365,6 +364,13 @@ export class Room {
       finishedAt: new Date().toISOString(),
     };
   }
+}
+
+/** Cryptographically random hex; works in Node 20+ and browsers. */
+function randomHex(bytes: number): string {
+  const b = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(b);
+  return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
 }
 
 function clean(s: string, max = 20): string {

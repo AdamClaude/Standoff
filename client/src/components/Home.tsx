@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CHARACTERS } from '@standoff/shared';
-import { api, profile } from '../net';
+import { api, OFFLINE, profile } from '../net';
 import { getLang, t, useLang } from '../i18n';
 import { sound } from '../audio';
 import { Avatar } from './Avatar';
@@ -73,16 +73,17 @@ export function Home() {
         {error && <p className="form-error" role="alert">{error}</p>}
 
         <div className="home-actions">
-          <button className="btn btn-primary" disabled={busy} onClick={() => create(false)}>{t('createRoom')}</button>
-          <div className="join-row">
+          {OFFLINE && <p className="muted small">{t('practiceNote')}</p>}
+          <button className="btn btn-primary" disabled={busy} onClick={() => create(false)}>{OFFLINE ? t('startPractice') : t('createRoom')}</button>
+          {!OFFLINE && <div className="join-row">
             <input
               aria-label={t('roomCode')} placeholder={t('roomCode')} value={code} maxLength={6}
               onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               className="code-input"
             />
             <button className="btn" disabled={busy || code.length !== 6} onClick={() => join(false)}>{t('joinRoom')}</button>
-          </div>
-          {code.length === 6 && <button className="btn-link" onClick={() => join(true)}>{t('watch')}</button>}
+          </div>}
+          {!OFFLINE && code.length === 6 && <button className="btn-link" onClick={() => join(true)}>{t('watch')}</button>}
           <button className="btn btn-ghost" disabled={busy} onClick={() => create(true)}>
             {t('tutorial')}
             <small>{t('tutorialHint')}</small>

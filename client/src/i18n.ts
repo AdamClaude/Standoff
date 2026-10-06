@@ -1,3 +1,4 @@
+import { store } from './storage';
 // All UI strings. Arabic is a first pass — native review recommended.
 import { useSyncExternalStore } from 'react';
 
@@ -100,6 +101,9 @@ const en = {
   splitOut: 'You sit this split out.',
   newBossToken: 'Boss crown',
   newBossDesc: 'Be Boss next round',
+  tapAgain: 'Tap it again to take it anyway.',
+  practiceNote: 'Practice mode: you against bots, right here in your browser. Playing with friends needs the online server.',
+  startPractice: 'Start practice',
   firstAidWarn: 'You have no wounds — this kit would be wasted.',
   clipWarn: 'No spent BANG to reload — this clip would be wasted.',
   clipPrompt: 'Reloaded. Throw away one other round.',
@@ -254,9 +258,12 @@ const ar: Partial<Dict> = {
   splitOut: 'لست في هذه القسمة.',
   newBossToken: 'تاج الزعيم',
   newBossDesc: 'كن الزعيم في العملية القادمة',
+  tapAgain: 'اضغط مرة أخرى لتأخذها على أي حال.',
+  practiceNote: 'وضع التدريب: أنت ضد الروبوتات داخل متصفحك. اللعب مع الأصدقاء يحتاج الخادم.',
+  startPractice: 'ابدأ التدريب',
   firstAidWarn: 'لا جروح لديك — هذه الحقيبة ستضيع.',
-  clipWarn: 'لا طلقة في المهملات — هذا المخزن سيضيع.',
-  clipPrompt: 'تمت إعادة التلقيم. ارمِ ورقة أخرى.',
+  clipWarn: 'لا طلقة مستعملة لإعادة التلقيم — هذا المخزن سيضيع.',
+  clipPrompt: 'تمت إعادة التلقيم. ارمِ رصاصة أخرى.',
   greedy: 'الطمّاع: خذ اثنتين',
   greedyHint: 'اختر غنيمتين ثم تخرج من هذه القسمة.',
   dictate: 'امنع نوعًا عن {name}',
@@ -306,7 +313,7 @@ const ar: Partial<Dict> = {
   sys_doorsLocked: 'الأبواب مقفلة. لا أحد يخرج قبل أن تُقسم الغنيمة.',
 };
 
-let lang: Lang = (localStorage.getItem('standoff.lang') as Lang) || (navigator.language.startsWith('ar') ? 'ar' : 'en');
+let lang: Lang = (store.get('standoff.lang') as Lang) || (navigator.language.startsWith('ar') ? 'ar' : 'en');
 const listeners = new Set<() => void>();
 
 function apply() {
@@ -317,7 +324,7 @@ apply();
 
 export function setLang(l: Lang) {
   lang = l;
-  localStorage.setItem('standoff.lang', l);
+  store.set('standoff.lang', l);
   apply();
   listeners.forEach(f => f());
 }
