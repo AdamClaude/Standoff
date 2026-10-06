@@ -5,7 +5,9 @@ import { api, getApp, serverNow, useApp } from '../net';
 import { getLang, setLang, t, useLang, type Key } from '../i18n';
 import { sfx, sound } from '../audio';
 import { describe, gunsOn, me, nameOf } from '../game-utils';
-import { Table } from './Table';
+import { Scene3D } from './Scene3D';
+import type { LootCard } from '@standoff/engine';
+import { itemLabel } from '../game-utils';
 import { Tray, doPick, type TrayState } from './Tray';
 import { Chat } from './Chat';
 import { Rules } from './Rules';
@@ -32,8 +34,8 @@ export function Game() {
   if (v.phase === 'GAME_OVER') return <EndScreen v={v} />;
 
   // What can be tapped on the table right now?
-  let seatAction: Parameters<typeof Table>[0]['seatAction'];
-  let lootAction: Parameters<typeof Table>[0]['lootAction'];
+  let seatAction: { ids: string[]; onPick: (id: string) => void; label: (p: PublicPlayer) => string } | undefined;
+  let lootAction: { ids: string[]; onPick: (id: string) => void; selected: string[] } | undefined;
   const others = (pred: (p: PublicPlayer) => boolean = () => true) =>
     v.players.filter(p => p.alive && p.id !== m?.id && pred(p)).map(p => p.id);
 
@@ -86,7 +88,21 @@ export function Game() {
       </header>
 
       <div className="stage">
-        <Table v={v} seatAction={seatAction} lootAction={lootAction} highlight={v.redirect?.player ?? null} />
+        <Scene3D
+          v={v}
+          ui={{
+            pickPlayers: seatAction?.ids ?? [],
+            onPickPlayer: seatAction?.onPick,
+            pickCards: !!(m?.alive && v.phase === 'LOAD' && remaining > 0),
+            onPickCard: id => { sfx.cock(); api.act({ type: 'LOAD', cardId: id }); },
+            pickLoot: lootAction?.ids ?? [],
+            onPickLoot: lootAction?.onPick,
+            selectedLoot: lootAction?.selected ?? [],
+            reducedMotion: reduced,
+            labels: { boss: t('boss'), out: t('dead'), you: t('you') },
+            lootLabel: (c: LootCard | 'NEW_BOSS') => c === 'NEW_BOSS' ? t('newBossToken') : c.kind === 'CASH' || c.kind === 'DIAMOND' ? `$${c.value / 1000}k` : itemLabel(c),
+          }}
+        />
         {countdown !== null && countdown > 0 && countdown <= 3 && (
           <div key={`${v.phaseSeq}-${countdown}`} className="countdown" aria-live="assertive">{countdown}</div>
         )}
@@ -96,6 +112,8 @@ export function Game() {
         </ol>
       </div>
 
+      <Crew v={v} />
+      {v.phase === 'LOOT_REVEAL' && <p className="rotate-hint">{t('rotateHint')}</p>}
       <Tray v={v} tray={tray} />
 
       <Coach v={v} />
@@ -126,6 +144,23 @@ export function Game() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Compact roster for wide screens, where gangsters beside you sit outside the view. */
+function Crew({ v }: { v: ClientView }) {
+  const order = [...v.players].sort((a, b) => a.seat - b.seat);
+  return (
+    <ul className="crew" aria-label={t('seats')}>
+      {order.map(p => (
+        <li key={p.id} className={`${p.alive ? '' : 'is-out'}${p.id === v.viewerId ? ' is-me' : ''}${v.currentPicker === p.id ? ' is-picking' : ''}`}>
+          <span className="crew-name">{p.id === v.bossId ? '♛ ' : ''}{p.name}</span>
+          <span className="crew-hp">{Array.from({ length: p.woundLimit }, (_, i) => <i key={i} className={i < p.woundLimit - p.wounds ? 'ok' : ''} />)}</span>
+          <span className="crew-shots" title={t('shotsFired', { n: p.shotsFired })}>{'▮'.repeat(p.shotsFired)}<em>{'▮'.repeat(Math.max(0, 3 - p.shotsFired))}</em></span>
+          <span className="crew-loot">◆ {p.lootCount}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

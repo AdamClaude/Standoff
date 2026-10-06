@@ -46,11 +46,19 @@ export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
             <span className={v.me.target || kid ? 'is-set' : ''}>{t('yourTarget')}: <b>{kid ? t('kidLater') : v.me.target ? nameOf(v, v.me.target) : '—'}</b></span>
           </div>
           <p className="tray-msg">{t('drawPrompt')}</p>
-          <Hand
-            cards={all}
-            chosenId={v.me.loaded?.id}
-            onPick={c => { if (c.id !== v.me!.loaded?.id) { sfx.cock(); api.act({ type: 'LOAD', cardId: c.id }); } }}
-          />
+          <div className="kind-pick">
+            {(['BANG', 'CLICK'] as const).map(k => {
+              const left = all.filter(c => c.kind === k);
+              const on = v.me!.loaded?.kind === k;
+              const card = hand.find(c => c.kind === k);
+              return (
+                <button key={k} className={`kind-btn is-${k.toLowerCase()}${on ? ' is-on' : ''}`} disabled={!card && !on}
+                  onClick={() => { if (!on && card) { sfx.cock(); api.act({ type: 'LOAD', cardId: card.id }); } }}>
+                  <b>{k}</b><small>×{left.length}</small>
+                </button>
+              );
+            })}
+          </div>
         </div>
       );
     }
