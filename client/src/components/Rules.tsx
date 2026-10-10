@@ -3,7 +3,7 @@ import { PAINTING_VALUES, POWER_TEXT } from '@standoff/engine';
 import { getLang, powerName, t } from '../i18n';
 
 const PHASES_EN = [
-  ['The loot', 'The loot spills out of the heist bag one piece at a time, plus the Boss cigar.'],
+  ['The loot', 'The loot spills out of the heist bag one piece at a time. The Boss cigar passes clockwise after every heist.'],
   ['Load and aim', 'One secret countdown: each gangster picks a bullet (BANG or CLICK) and a rival to aim at. You get 3 BANGs and 5 CLICKs for the whole game, one per heist. When the count ends every aim is revealed at once; bullets stay hidden until the showdown. No target by then means your gun stays down.'],
   ['Boss’s call', 'The Boss may order one gangster to aim at someone else — or switch his own aim.'],
   ['Hold or hit the floor', 'Second countdown. Hitting the floor keeps you safe but out of the split. Hesitate and you stay standing.'],
@@ -11,7 +11,7 @@ const PHASES_EN = [
   ['The split', 'From the Boss, going clockwise, everyone still standing and unhurt grabs one item at a time until the crate is empty.'],
 ];
 const PHASES_AR = [
-  ['الغنيمة', 'تخرج الغنائم من كيس السرقة واحدة تلو الأخرى، ومعها سيجار الزعيم.'],
+  ['الغنيمة', 'تخرج الغنائم من كيس السرقة واحدة تلو الأخرى. سيجار الزعيم ينتقل مع عقارب الساعة بعد كل عملية.'],
   ['لقّم وصوّب', 'عدّ تنازلي سرّي: كل واحد يختار رصاصة (طلقة أو فارغة) ومنافسًا يصوّب عليه. لديك 3 طلقات و5 فارغات للعبة كلها. عند نهاية العدّ تظهر كل التصويبات معًا، وتبقى الرصاصات مخفية حتى المواجهة. من لم يختر هدفًا يبقى مسدسه منخفضًا.'],
   ['كلمة الزعيم', 'يمكن للزعيم أن يأمر واحدًا بالتصويب على غيره — أو يغيّر تصويبه هو.'],
   ['اصمد أو انحنِ', 'عدّ تنازلي ثانٍ. الانحناء يحميك لكنه يخرجك من القسمة. إن ترددت تبقى واقفًا.'],

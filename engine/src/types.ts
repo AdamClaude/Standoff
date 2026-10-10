@@ -132,7 +132,7 @@ export type GameEvent =
   | { t: 'PICK'; round: number; playerId: PlayerId; item: LootCard | 'NEW_BOSS'; auto: boolean; effect?: string }
   | { t: 'NOBODY_STANDING'; round: number; rule: NoStandRule }
   | { t: 'ELIMINATED'; round: number; playerId: PlayerId }
-  | { t: 'BOSS_CHANGE'; round: number; bossId: PlayerId; reason: 'TOKEN' | 'BOSS_DIED' }
+  | { t: 'BOSS_CHANGE'; round: number; bossId: PlayerId; reason: 'TOKEN' | 'BOSS_DIED' | 'ROTATION' }
   | { t: 'POWER'; round: number; playerId: PlayerId; power: PowerId; text: string; private?: PlayerId[] }
   | { t: 'GAME_OVER'; winners: PlayerId[]; reason: 'LAST_ALIVE' | 'ROUNDS' | 'NO_SURVIVORS' };
 

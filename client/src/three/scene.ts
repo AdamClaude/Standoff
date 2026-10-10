@@ -1232,13 +1232,18 @@ export class BarScene {
 
     this.animateBag(nowMs);
     this.animateParticles(fxSlow);
-    this.fx = this.fx.filter(f => {
+    // Effects can spawn more effects while updating (a slug landing spawns the BANG! burst),
+    // so swap the list out first and keep anything added meanwhile — otherwise it freezes on screen.
+    const running = this.fx;
+    this.fx = [];
+    const kept = running.filter(f => {
       f.t += f.slow ? fxSlow : fxDt;
       const k = f.life <= 0 ? 1 : Math.min(1, f.t / f.life);
       f.update(k, dt);
       if (k >= 1) { if (f.obj.parent === this.scene && !(f.obj instanceof THREE.Mesh && (this.decals.includes(f.obj) || this.tableDecals.includes(f.obj)))) this.scene.remove(f.obj); return false; }
       return true;
     });
+    this.fx = kept.concat(this.fx);
 
     this.updateCamera(dt, time);
     this.adaptQuality(dt);
