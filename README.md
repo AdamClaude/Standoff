@@ -18,6 +18,12 @@ npm run build        # builds client/dist
 npm start            # http://localhost:8080
 ```
 
+### Online with friends: Netlify + Render
+
+- **Render** runs the game server from `render.yaml` (New → Blueprint → this repo). Free plan: sleeps after ~15 min idle, wakes in ~1 min.
+- **Netlify** hosts the page from `netlify.toml`. Set the environment variable `VITE_SERVER_URL` to the Render URL (e.g. `https://standoff-server.onrender.com`) and redeploy.
+- Both redeploy automatically on every push to `main`.
+
 Docker / Fly.io / Railway / Render: the `Dockerfile` builds one container listening on `$PORT` (default 8080). Use sticky sessions if you run more than one instance (rooms live in memory).
 
 ## Test it
@@ -40,7 +46,7 @@ npm run sim -- --games 200 --players 5 --powers --levels SHARK,EASY,NORMAL,NORMA
 
 After eight heists, survivors count their stash. Most diamonds (by count) earns $60k; paintings score as a set (1→$4k … 10→$500k). Richest survivor wins; ties go to whoever took more wounds.
 
-**House rules** (the original rules are silent): if the Boss dies the crown passes clockwise; if nobody holds, loot rolls over (or is lost — host setting); if everyone left dies in the same showdown, nobody wins.
+**House rules**: the Boss cigar passes clockwise every heist (no Boss token in the loot); one wound per heist at most; the Boss may switch his own aim; if nobody makes the split, the loot is lost; if everyone left dies in the same showdown, nobody wins.
 
 ## Layout
 

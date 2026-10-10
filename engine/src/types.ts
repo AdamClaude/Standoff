@@ -55,7 +55,7 @@ export interface GameSettings {
 export const DEFAULT_SETTINGS: GameSettings = {
   powers: false,
   openVaults: false,
-  noStandRule: 'ROLLOVER',
+  noStandRule: 'DISCARD',
   rounds: 8,
 };
 

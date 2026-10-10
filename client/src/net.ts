@@ -39,7 +39,8 @@ export const getApp = () => state;
 export const OFFLINE = import.meta.env.VITE_OFFLINE === '1';
 const socket: Socket<ServerToClient, ClientToServer> = OFFLINE
   ? (createLocalSocket() as unknown as Socket<ServerToClient, ClientToServer>)
-  : io({ transports: ['websocket', 'polling'] });
+  // Online: the page (Netlify) talks to the game server (Render) at VITE_SERVER_URL; same origin when unset.
+  : io(import.meta.env.VITE_SERVER_URL || undefined, { transports: ['websocket', 'polling'] });
 
 // ── persistence of seats for reconnection ──
 const SEATS_KEY = 'standoff.seats';

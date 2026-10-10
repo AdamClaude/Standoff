@@ -111,6 +111,7 @@ export class BarScene {
   private myCards = new Map<string, THREE.Group>();
   private viewCigar: THREE.Group;
   private bag: THREE.Group | null = null;
+  private swept = new Set<string>(); // loot thrown away this heist (nobody made the split)
   private bagStart = Infinity;
   private bagCount = 0;
   private bagPuff = 0;
@@ -541,7 +542,19 @@ export class BarScene {
     if (v.phase === 'COURAGE') music.setMood('tense');
     else if (v.phase === 'SHOWDOWN') music.setMood('silent');
     else if (prev === 'SHOWDOWN' || v.phase === 'LOOT_REVEAL' || v.phase === 'LOAD') setTimeout(() => music.setMood('normal'), v.phase === 'SPLIT' ? 900 : 0);
-    if (v.phase === 'LOOT_REVEAL') this.dropBag();
+    if (v.phase === 'LOOT_REVEAL') { this.swept.clear(); this.dropBag(); }
+    // Nobody made the split: the loot is gone — sweep it off the table for everyone to see.
+    if (v.phase === 'ROUND_END' && v.settings.noStandRule === 'DISCARD' && v.table.length > 0) {
+      const now = performance.now();
+      let i = 0;
+      for (const [id, o] of this.loot) {
+        if (o.fly) continue;
+        this.swept.add(id);
+        const out = o.home.clone().setY(0).normalize().multiplyScalar(3.2);
+        o.fly = { from: o.group.position.clone(), to: out.setY(0.4), start: now + (i++) * 60 };
+      }
+      if (i) sfx.swoosh();
+    }
     if (v.phase === 'LOOT_REVEAL') {
       // New heist: hats back on, clear the blood on the cloth (the floor keeps its stains).
       for (const d of this.tableDecals) this.scene.remove(d);
@@ -721,6 +734,7 @@ export class BarScene {
     let slot = 0;
     items.forEach((c, i) => {
       const id = c === 'NEW_BOSS' ? NEW_BOSS_TOKEN : c.id;
+      if (this.swept.has(id)) return;
       let o = this.loot.get(id);
       const home = c === 'NEW_BOSS' ? new THREE.Vector3(0, TABLE_Y + 0.03, 0) : slots[slot++];
       if (!o) {
@@ -1180,7 +1194,7 @@ export class BarScene {
 
       for (const [id, o] of this.loot) {
         if (o.fly) {
-          const k = Math.min(1, (nowMs - o.fly.start) / 550);
+          const k = THREE.MathUtils.clamp((nowMs - o.fly.start) / 550, 0, 1);
           o.group.position.lerpVectors(o.fly.from, o.fly.to, k);
           o.group.position.y += Math.sin(k * Math.PI) * 0.45;
           o.group.scale.setScalar(1 - k * 0.6);

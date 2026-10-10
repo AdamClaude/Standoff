@@ -1,0 +1,14 @@
+# Netlify hosts the game page. The live game server runs on Render (see render.yaml);
+# set VITE_SERVER_URL in Netlify → Site configuration → Environment variables to its URL.
+[build]
+  command = "npm run build"
+  publish = "client/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Invite links like /?room=ABC123 and any deep link load the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

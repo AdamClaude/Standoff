@@ -71,7 +71,6 @@ export function Lobby() {
         <Setting label="timers" disabled={!isHost} value={s.timers} options={['FAST', 'NORMAL', 'CHILL']} onChange={v => set({ timers: v as RoomSettings['timers'] })} />
         <Setting label="maxPlayers" disabled={!isHost} value={String(s.maxPlayers)} options={['3', '4', '5', '6', '7', '8']} raw onChange={v => set({ maxPlayers: Number(v) })} />
         <Setting label="botLevel" disabled={!isHost} value={s.botLevel} options={['EASY', 'NORMAL', 'SHARK']} onChange={v => set({ botLevel: v as RoomSettings['botLevel'] })} />
-        <Setting label="noStandRule" disabled={!isHost} value={s.noStandRule} options={['ROLLOVER', 'DISCARD']} onChange={v => set({ noStandRule: v as RoomSettings['noStandRule'] })} />
         <Toggle label="botTakeover" disabled={!isHost} value={s.botTakeover} onChange={v => set({ botTakeover: v })} />
       </section>
 

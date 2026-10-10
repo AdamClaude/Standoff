@@ -1,0 +1,15 @@
+# Render Blueprint: the realtime game server (rooms, timers, bots). Free plan sleeps after
+# ~15 minutes idle; the first visitor after that waits ~1 minute while it wakes up.
+services:
+  - type: web
+    name: standoff-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start -w server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production

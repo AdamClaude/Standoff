@@ -42,7 +42,7 @@ export function Rules({ v, onClose }: { v: ClientView; onClose: () => void }) {
         <p className="small">
           {getLang() === 'ar'
             ? 'النقود: 15×5k، 15×10k، 10×20k. ألماس: 5×1k، 3×5k، 1×10k؛ صاحب أكثر عدد من الألماس يربح 60k (التعادل = لا أحد). 3 مخازن، 2 إسعاف. فقط الأحياء يُحسبون. التعادل يُكسر بأكثر الجروح.'
-            : 'Cash: 15×5k, 15×10k, 10×20k. Diamonds: 5×1k, 3×5k, 1×10k; most diamonds (by count) earns a 60k bonus (tie = nobody). 3 clips, 2 first-aid kits. Only the living score. Ties go to whoever took more wounds. House rules: if the Boss dies the cigar passes clockwise; if nobody stands the loot follows the hideout’s house rule.'}
+            : 'Cash: 15×5k, 15×10k, 10×20k. Diamonds: 5×1k, 3×5k, 1×10k; most diamonds (by count) earns a 60k bonus (tie = nobody). 3 clips, 2 first-aid kits. Only the living score. Ties go to whoever took more wounds. House rules: if the Boss dies the cigar passes clockwise; if nobody makes the split, that heist’s loot is lost.'}
         </p>
         {powers.length > 0 && (
           <>

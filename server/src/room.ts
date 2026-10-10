@@ -149,7 +149,7 @@ export class Room {
     // Powers and open vaults are not offered any more: always off.
     s.powers = false;
     s.openVaults = false;
-    if (p.noStandRule && ['ROLLOVER', 'DISCARD'].includes(p.noStandRule)) s.noStandRule = p.noStandRule;
+    s.noStandRule = 'DISCARD'; // if nobody makes the split, the loot is gone (no longer a house-rule toggle)
     if (p.botLevel && ['EASY', 'NORMAL', 'SHARK'].includes(p.botLevel)) s.botLevel = p.botLevel;
     if (typeof p.botTakeover === 'boolean') s.botTakeover = p.botTakeover;
     this.settings = s;

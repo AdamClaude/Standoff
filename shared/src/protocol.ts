@@ -18,7 +18,7 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   timers: 'NORMAL',
   powers: false,
   openVaults: false,
-  noStandRule: 'ROLLOVER',
+  noStandRule: 'DISCARD',
   botLevel: 'NORMAL',
   botTakeover: true,
 };

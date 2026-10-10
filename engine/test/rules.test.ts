@@ -275,8 +275,8 @@ describe('split', () => {
     expect(s.round).toBe(2);
   });
 
-  it('nobody standing rolls loot over; the cigar still moves on', () => {
-    const s = newGame(4, {}, 'p0');
+  it('ROLLOVER (engine option, not offered in rooms) carries the loot over; the cigar still moves on', () => {
+    const s = newGame(4, { noStandRule: 'ROLLOVER' }, 'p0');
     playRound(s, {}, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p0' }, { p0: 'DUCK', p1: 'DUCK', p2: 'DUCK', p3: 'DUCK' });
     tick(s); // showdown → split → (nobody) round end
     expect(s.phase).toBe('ROUND_END');
@@ -285,8 +285,8 @@ describe('split', () => {
     expect(s.table).toHaveLength(16);
   });
 
-  it('nobody standing with DISCARD rule throws the loot away', () => {
-    const s = newGame(4, { noStandRule: 'DISCARD' }, 'p0');
+  it('nobody standing: the loot is thrown away (default)', () => {
+    const s = newGame(4, {}, 'p0');
     playRound(s, {}, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p0' }, { p0: 'DUCK', p1: 'DUCK', p2: 'DUCK', p3: 'DUCK' });
     tick(s); tick(s);
     expect(s.table).toHaveLength(8);
