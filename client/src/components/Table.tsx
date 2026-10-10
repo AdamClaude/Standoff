@@ -210,13 +210,14 @@ const Pistol = () => (
   </svg>
 );
 
-const Crown = () => (
-  <svg viewBox="0 0 24 16" width="26" height="17"><path d="M2 14 L4 4 L9 9 L12 2 L15 9 L20 4 L22 14 Z" fill="#e2b23a" stroke="#0d0b10" strokeWidth="1.5" strokeLinejoin="round" /></svg>
+/** The Boss cigar (the Boss is whoever holds it). */
+export const Crown = () => (
+  <svg viewBox="0 0 28 10" width="28" height="10" aria-hidden="true"><rect x="2" y="2.5" width="20" height="5" rx="2.5" fill="#6b3a1c" stroke="#0d0b10" strokeWidth="1" /><rect x="6" y="2.5" width="3" height="5" fill="#e2b23a" /><rect x="20" y="2.5" width="3" height="5" fill="#8d8a86" /><circle cx="23.5" cy="5" r="1.6" fill="#ff5a1a" /></svg>
 );
 
 export function ItemArt({ c, big }: { c: LootCard | 'NEW_BOSS'; big?: boolean }) {
   const s = big ? 120 : 40;
-  if (c === 'NEW_BOSS') return <svg viewBox="0 0 40 40" width={s} height={s}><circle cx="20" cy="20" r="17" fill="#8a5ad8" stroke="#0d0b10" strokeWidth="2" /><path d="M9 26 L11 14 L16 19 L20 10 L24 19 L29 14 L31 26 Z" fill="#e2b23a" stroke="#0d0b10" strokeWidth="1.5" /></svg>;
+  if (c === 'NEW_BOSS') return <svg viewBox="0 0 40 40" width={s} height={s}><circle cx="20" cy="20" r="17" fill="#3a2a22" stroke="#0d0b10" strokeWidth="2" /><g transform="rotate(-25 20 20)"><rect x="7" y="17" width="24" height="7" rx="3.5" fill="#6b3a1c" stroke="#0d0b10" strokeWidth="1.2" /><rect x="11" y="17" width="4" height="7" fill="#e2b23a" /><rect x="29" y="17" width="3" height="7" fill="#8d8a86" /><circle cx="32.5" cy="20.5" r="2" fill="#ff5a1a" /></g></svg>;
   switch (c.kind) {
     case 'CASH': {
       const stacks = c.value === 20000 ? 3 : c.value === 10000 ? 2 : 1;

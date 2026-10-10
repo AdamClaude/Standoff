@@ -570,7 +570,7 @@ button.round:hover { transform: translateY(-6px); border-color: var(--smoke-2); 
 /* ── step instructions ─────────────────────────────────────────────────── */
 .step-banner {
   position: absolute; z-index: 7; top: calc(74px + env(safe-area-inset-top)); left: 50%; translate: -50% 0;
-  display: grid; justify-items: center; gap: 1px; pointer-events: none; max-width: calc(100% - 32px);
+  display: grid; justify-items: center; gap: 1px; pointer-events: none; width: max-content; max-width: calc(100% - 32px);
   padding: 6px 18px 8px; border-radius: 10px; text-align: center;
   background: rgba(14, 8, 8, 0.86); border: 1px solid rgba(226, 178, 58, 0.45);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -603,4 +603,37 @@ button.round:hover { transform: translateY(-6px); border-color: var(--smoke-2); 
 .cut-skip {
   position: absolute; right: 16px; bottom: calc(11vh + 14px); font: 600 0.85rem var(--label); color: var(--lamp-dim);
   background: rgba(0,0,0,.55); padding: 4px 12px; border-radius: 999px;
+}
+
+.crew-cigar { display: inline-block; vertical-align: middle; margin-inline-end: 5px; filter: drop-shadow(0 0 4px rgba(255,110,40,.7)); }
+[dir=rtl] .crew-cigar svg { transform: scaleX(-1); }
+
+.boss-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* Loot values: bottom-left, above the tray */
+.loot-guide, .loot-guide-chip {
+  position: fixed; z-index: 14; inset-inline-start: 12px; bottom: calc(146px + env(safe-area-inset-bottom));
+}
+.loot-guide {
+  width: min(300px, calc(100vw - 24px)); padding: 10px 12px 12px; border-radius: 14px;
+  background: rgba(16,12,10,.92); border: 1px solid rgba(226,178,58,.55); color: var(--paper, #f3e6c4);
+  box-shadow: 0 10px 30px rgba(0,0,0,.6); display: grid; gap: 6px; font-size: .88rem; line-height: 1.3;
+  animation: guide-in .35s cubic-bezier(.2,1.4,.4,1);
+}
+.loot-guide header { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--gold, #e2b23a); font: 600 1rem var(--label); }
+.loot-guide p { margin: 0; }
+.loot-guide-x { background: none; border: 0; color: inherit; font-size: 1rem; padding: 4px 6px; cursor: pointer; border-radius: 8px; }
+.loot-guide-x:hover, .loot-guide-x:focus-visible { background: rgba(255,255,255,.1); }
+.loot-guide-paint { width: 100%; border-collapse: collapse; text-align: center; font: 600 .78rem var(--label); }
+.loot-guide-paint th { color: var(--gold, #e2b23a); font-weight: 600; padding: 1px 0; }
+.loot-guide-paint td { color: #b8f0a6; padding: 1px 0; border-top: 1px solid rgba(255,255,255,.12); }
+.loot-guide-chip {
+  padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(226,178,58,.55); cursor: pointer;
+  background: rgba(16,12,10,.88); color: var(--gold, #e2b23a); font: 600 .9rem var(--label);
+}
+@keyframes guide-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) { .loot-guide, .loot-guide-chip { bottom: calc(132px + env(safe-area-inset-bottom)); } }
+@media (max-height: 520px) and (orientation: landscape) {
+  .loot-guide { width: 270px; font-size: .78rem; gap: 4px; padding: 8px 10px; bottom: 112px; }
+  .loot-guide-chip { bottom: 112px; }
 }

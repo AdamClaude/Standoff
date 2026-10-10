@@ -5,7 +5,7 @@ import {
   type Action, type BotLevel, type GameState, type PlayerId,
 } from '@standoff/engine';
 import {
-  BOT_NAMES, CHARACTERS, DEFAULT_ROOM_SETTINGS, phaseDuration,
+  BOT_NAMES, CHARACTERS, DEFAULT_ROOM_SETTINGS, LOOT_REVEAL_FIRST_MS, LOOT_REVEAL_MS, phaseDuration,
   type ChatMessage, type GameMessage, type Intent, type LobbyView, type RoomSettings, type TimerKey,
 } from '@standoff/shared';
 
@@ -231,6 +231,9 @@ export class Room {
     let ms = phaseDuration(this.settings.timers, key);
     // Showdown waits longer if a Smart player must choose.
     if (s.phase === 'SHOWDOWN' && s.pending) ms += phaseDuration(this.settings.timers, 'PENDING');
+    // The reveal is a show, not a decision: the loot pours out of the heist bag at the same pace in every preset,
+    // and the first heist also plays the getaway cutscene.
+    if (s.phase === 'LOOT_REVEAL') ms = s.round === 1 ? LOOT_REVEAL_FIRST_MS : LOOT_REVEAL_MS;
     ms = Math.max(20, ms * this.hooks.timeScale);
     this.phaseEndsAt = this.hooks.now() + ms;
     const seq = s.phaseSeq;

@@ -48,7 +48,7 @@ export function describe(e: GameEvent, v: ClientView): string | string[] | null 
   const n = (id: string) => nameOf(v, id);
   switch (e.t) {
     case 'ROUND_START': return t('ev_round', { n: e.round, boss: n(e.bossId) });
-    case 'REDIRECT_ORDER': return t('ev_redirect', { name: n(e.player) });
+    case 'REDIRECT_ORDER': return e.player === e.by ? t('bossSelfOther') : t('ev_redirect', { name: n(e.player) });
     case 'REDIRECTED': return t('ev_redirected', { name: n(e.player), to: n(e.to) });
     case 'BOSS_PASSED': return null;
     case 'COURAGE': {

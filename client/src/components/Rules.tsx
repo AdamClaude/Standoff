@@ -3,19 +3,19 @@ import { PAINTING_VALUES, POWER_TEXT } from '@standoff/engine';
 import { getLang, powerName, t } from '../i18n';
 
 const PHASES_EN = [
-  ['The loot', 'Eight items land in the crate, plus the Boss crown.'],
+  ['The loot', 'The loot spills out of the heist bag one piece at a time, plus the Boss cigar.'],
   ['Load and aim', 'One secret countdown: each gangster picks a bullet (BANG or CLICK) and a rival to aim at. You get 3 BANGs and 5 CLICKs for the whole game, one per heist. When the count ends every aim is revealed at once; bullets stay hidden until the showdown. No target by then means your gun stays down.'],
-  ['Boss’s call', 'The Boss may order one gangster to aim at someone else.'],
+  ['Boss’s call', 'The Boss may order one gangster to aim at someone else — or switch his own aim.'],
   ['Hold or hit the floor', 'Second countdown. Hitting the floor keeps you safe but out of the split. Hesitate and you stay standing.'],
-  ['Showdown', 'Shooters still standing fire at targets still standing. Every BANG wounds. Three wounds and you’re out.'],
+  ['Showdown', 'Shooters still standing fire at targets still standing. A BANG wounds — but nobody takes more than one wound per heist, however many guns hit them. Three wounds and you’re out.'],
   ['The split', 'From the Boss, going clockwise, everyone still standing and unhurt grabs one item at a time until the crate is empty.'],
 ];
 const PHASES_AR = [
-  ['الغنيمة', 'ثماني غنائم في الصندوق، ومعها تاج الزعيم.'],
+  ['الغنيمة', 'تخرج الغنائم من كيس السرقة واحدة تلو الأخرى، ومعها سيجار الزعيم.'],
   ['لقّم وصوّب', 'عدّ تنازلي سرّي: كل واحد يختار رصاصة (طلقة أو فارغة) ومنافسًا يصوّب عليه. لديك 3 طلقات و5 فارغات للعبة كلها. عند نهاية العدّ تظهر كل التصويبات معًا، وتبقى الرصاصات مخفية حتى المواجهة. من لم يختر هدفًا يبقى مسدسه منخفضًا.'],
-  ['كلمة الزعيم', 'يمكن للزعيم أن يأمر واحدًا بالتصويب على غيره.'],
+  ['كلمة الزعيم', 'يمكن للزعيم أن يأمر واحدًا بالتصويب على غيره — أو يغيّر تصويبه هو.'],
   ['اصمد أو انحنِ', 'عدّ تنازلي ثانٍ. الانحناء يحميك لكنه يخرجك من القسمة. إن ترددت تبقى واقفًا.'],
-  ['المواجهة', 'يكشف الواقفون الذين أهدافهم واقفة. كل طلقة تجرح. ثلاثة جروح وتخرج.'],
+  ['المواجهة', 'يكشف الواقفون الذين أهدافهم واقفة. الطلقة تجرح، لكن لا أحد يأخذ أكثر من جرح واحد في العملية مهما أصابته المسدسات. ثلاثة جروح وتخرج.'],
   ['القسمة', 'من الزعيم مع عقارب الساعة، يأخذ كل واقف سليم غنيمة واحدة بالدور حتى يفرغ الصندوق.'],
 ];
 
@@ -42,7 +42,7 @@ export function Rules({ v, onClose }: { v: ClientView; onClose: () => void }) {
         <p className="small">
           {getLang() === 'ar'
             ? 'النقود: 15×5k، 15×10k، 10×20k. ألماس: 5×1k، 3×5k، 1×10k؛ صاحب أكثر عدد من الألماس يربح 60k (التعادل = لا أحد). 3 مخازن، 2 إسعاف. فقط الأحياء يُحسبون. التعادل يُكسر بأكثر الجروح.'
-            : 'Cash: 15×5k, 15×10k, 10×20k. Diamonds: 5×1k, 3×5k, 1×10k; most diamonds (by count) earns a 60k bonus (tie = nobody). 3 clips, 2 first-aid kits. Only the living score. Ties go to whoever took more wounds. House rules: if the Boss dies the crown passes clockwise; if nobody stands the loot follows the hideout’s house rule.'}
+            : 'Cash: 15×5k, 15×10k, 10×20k. Diamonds: 5×1k, 3×5k, 1×10k; most diamonds (by count) earns a 60k bonus (tie = nobody). 3 clips, 2 first-aid kits. Only the living score. Ties go to whoever took more wounds. House rules: if the Boss dies the cigar passes clockwise; if nobody stands the loot follows the hideout’s house rule.'}
         </p>
         {powers.length > 0 && (
           <>

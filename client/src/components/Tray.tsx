@@ -83,14 +83,21 @@ export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
       return (
         <div className="tray">
           <p className="tray-msg">{t('bossPrompt')}</p>
-          <button className="btn" onClick={() => api.act({ type: 'BOSS_PASS' })}>{t('bossPass')}</button>
+          <div className="boss-btns">
+            {v.redirectCandidates.includes(m.id) && (
+              <button className="btn" onClick={() => api.act({ type: 'BOSS_REDIRECT', target: m.id })}>{t('bossSelf')}</button>
+            )}
+            <button className="btn" onClick={() => api.act({ type: 'BOSS_PASS' })}>{t('bossPass')}</button>
+          </div>
         </div>
       );
 
     case 'REDIRECT':
       return (
         <div className="tray">
-          <p className="tray-msg">{v.redirect?.player === m.id ? t('redirectPrompt') : t('redirectOther', { name: nameOf(v, v.redirect?.player) })}</p>
+          <p className="tray-msg">{v.redirect?.player === m.id
+            ? (v.bossId === m.id ? t('st_redirect') : t('redirectPrompt'))
+            : v.redirect?.player === v.bossId ? t('bossSelfOther') : t('redirectOther', { name: nameOf(v, v.redirect?.player) })}</p>
         </div>
       );
 

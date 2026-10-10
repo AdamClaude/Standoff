@@ -674,10 +674,7 @@ let cashTex: THREE.Texture | null = null;
 export function buildLoot(c: LootCard | 'NEW_BOSS', index: number): THREE.Group {
   const g = new THREE.Group();
   if (c === 'NEW_BOSS') {
-    const crown = buildCrown();
-    crown.scale.setScalar(1.15);
-    crown.position.y = 0.05;
-    g.add(crown);
+    g.add(buildCigarLoot()); // grab the cigar, be the Boss next heist
     return g;
   }
   switch (c.kind) {
@@ -756,3 +753,148 @@ export function setCardFace(m: THREE.Mesh, kind: BulletKind | 'BACK') {
 }
 
 export { INK };
+
+// ── Bullets (replace the old bullet cards) ───────────────────────────────────
+// Everyone else's rounds look identical ('BACK'); only the owner sees BANG vs CLICK,
+// and the whole table sees the truth once a round is fired at the showdown.
+
+const bulletGeo = {
+  case: new THREE.CylinderGeometry(0.021, 0.021, 0.07, 16),
+  rim: new THREE.CylinderGeometry(0.024, 0.024, 0.008, 16),
+  slug: new THREE.SphereGeometry(0.02, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+  slugBody: new THREE.CylinderGeometry(0.02, 0.021, 0.018, 16),
+  crimp: new THREE.ConeGeometry(0.021, 0.03, 6),
+  ring: new THREE.CylinderGeometry(0.0215, 0.0215, 0.012, 16),
+};
+const bulletMat = {
+  brass: std('#d4a548', { metalness: 0.95, roughness: 0.22, emissive: '#2a1a00', emissiveIntensity: 0.4 }),
+  copper: std('#c4643a', { metalness: 0.9, roughness: 0.25, emissive: '#3a0e00', emissiveIntensity: 0.5 }),
+  lead: std('#7c7a80', { metalness: 0.7, roughness: 0.35 }),
+  bangRing: std('#e0261c', { roughness: 0.4, emissive: '#7a0600', emissiveIntensity: 1.1 }),
+  clickRing: std('#3f6fb8', { roughness: 0.5, emissive: '#081a3a', emissiveIntensity: 0.6 }),
+};
+
+export type BulletFace = BulletKind | 'BACK';
+
+/** A standing cartridge. BANG: copper slug + red ring. CLICK: crimped blank + blue ring. BACK: anonymous round. */
+export function buildBullet(kind: BulletFace): THREE.Group {
+  const g = new THREE.Group();
+  setBulletFace(g, kind);
+  return g;
+}
+
+export function setBulletFace(g: THREE.Group, kind: BulletFace) {
+  if (g.userData.face === kind) return;
+  g.userData.face = kind;
+  const pick = g.userData.pick;
+  g.clear();
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, y: number) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = y;
+    m.castShadow = true;
+    if (pick) m.userData.pick = pick;
+    g.add(m);
+    return m;
+  };
+  add(bulletGeo.rim, bulletMat.brass, 0.004);
+  add(bulletGeo.case, bulletMat.brass, 0.043);
+  if (kind === 'CLICK') {
+    add(bulletGeo.crimp, bulletMat.brass, 0.093);
+    add(bulletGeo.ring, bulletMat.clickRing, 0.016);
+  } else {
+    const tip = kind === 'BANG' ? bulletMat.copper : bulletMat.lead;
+    add(bulletGeo.slugBody, tip, 0.087);
+    add(bulletGeo.slug, tip, 0.096).scale.y = 1.5;
+    if (kind === 'BANG') add(bulletGeo.ring, bulletMat.bangRing, 0.016);
+  }
+}
+
+/** Make every mesh of a bullet pickable (meshes are rebuilt on face changes, so set it on the group first). */
+export function markBulletPick(g: THREE.Group, pick: unknown) {
+  g.userData.pick = pick;
+  g.traverse(o => { o.userData.pick = pick; });
+}
+
+// ── The Boss's cigar (replaces the crown) ────────────────────────────────────
+
+/** A fat cigar with a gold band and a glowing ember. userData.ember is where smoke comes from. */
+export function buildBossCigar(scale = 1): THREE.Group {
+  const g = new THREE.Group();
+  const leaf = std('#6b3a1c', { roughness: 0.8 });
+  const body = mesh(new THREE.CylinderGeometry(0.026, 0.024, 0.24, 14), leaf, 0, 0, 0, false);
+  body.rotation.x = Math.PI / 2;
+  const capEnd = mesh(new THREE.SphereGeometry(0.024, 12, 8), leaf, 0, 0, -0.12, false);
+  const band = mesh(new THREE.CylinderGeometry(0.0275, 0.0275, 0.03, 14), MAT.gold, 0, 0, -0.07, false);
+  band.rotation.x = Math.PI / 2;
+  const bandRed = mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.008, 14), MAT.red, 0, 0, -0.07, false);
+  bandRed.rotation.x = Math.PI / 2;
+  const ash = mesh(new THREE.CylinderGeometry(0.025, 0.026, 0.025, 14), std('#8d8a86', { roughness: 1 }), 0, 0, 0.13, false);
+  ash.rotation.x = Math.PI / 2;
+  const ember = new THREE.Mesh(new THREE.CircleGeometry(0.024, 14), new THREE.MeshBasicMaterial({ color: '#ff5a1a', toneMapped: false }));
+  ember.position.z = 0.1435;
+  const glow = new THREE.PointLight('#ff6a20', 0.6, 0.6, 2);
+  glow.position.z = 0.17;
+  g.add(body, capEnd, band, bandRed, ash, ember, glow);
+  g.scale.setScalar(scale);
+  g.userData.ember = ember;
+  g.userData.glow = glow;
+  return g;
+}
+
+/** The Boss cigar as a loot item: a cigar resting on a heavy glass ashtray. */
+export function buildCigarLoot(): THREE.Group {
+  const g = new THREE.Group();
+  const tray = mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.03, 24), new THREE.MeshPhysicalMaterial({ color: '#9fb8c0', roughness: 0.05, transmission: 0.2, clearcoat: 1, metalness: 0 }), 0, 0.015, 0);
+  const well = mesh(new THREE.CylinderGeometry(0.075, 0.07, 0.012, 24), std('#2a2a2c', { roughness: 0.9 }), 0, 0.027, 0, false);
+  const c = buildBossCigar(1.1);
+  c.position.set(0.02, 0.06, 0);
+  c.rotation.y = 0.9;
+  c.rotation.x = -0.12;
+  g.add(tray, well, c);
+  g.userData.ember = c.userData.ember;
+  return g;
+}
+
+// ── Heist bag: the loot spills out of it at the start of every round ─────────
+
+let bagTex: THREE.Texture | null = null;
+function bagTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = 256;
+  const x = cv.getContext('2d')!;
+  x.fillStyle = '#8a7a58'; x.fillRect(0, 0, 512, 256);
+  for (let i = 0; i < 5200; i++) { // burlap weave
+    x.fillStyle = `rgba(${Math.random() < 0.5 ? '40,30,15' : '200,180,140'},${0.08 + Math.random() * 0.1})`;
+    x.fillRect(Math.random() * 512, Math.random() * 256, 1 + Math.random() * 3, 1);
+  }
+  x.font = 'bold 130px Georgia, serif';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = '#1a140c';
+  for (const cx of [128, 384]) x.fillText('$', cx, 136); // one on each side
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** A burlap sack with a big $ on it. userData.neck wobbles when loot pops out. */
+export function buildHeistBag(): THREE.Group {
+  const g = new THREE.Group();
+  bagTex ??= bagTexture();
+  const cloth = std('#ffffff', { map: bagTex, roughness: 1 });
+  const plain = std('#8a7a58', { roughness: 1 });
+  const body = mesh(new THREE.SphereGeometry(0.2, 24, 18), cloth, 0, 0.17, 0);
+  body.scale.set(1, 0.92, 0.85);
+  const neck = new THREE.Group();
+  neck.position.y = 0.34;
+  neck.add(mesh(new THREE.CylinderGeometry(0.05, 0.11, 0.09, 16), plain, 0, 0.0, 0));
+  const tie = mesh(new THREE.TorusGeometry(0.052, 0.012, 8, 20), std('#3a2a18'), 0, 0.03, 0, false);
+  tie.rotation.x = Math.PI / 2;
+  neck.add(tie);
+  const flare = mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.07, 16, 1, true), plain, 0, 0.08, 0);
+  (flare.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+  neck.add(flare);
+  g.add(body, neck);
+  g.userData.neck = neck;
+  g.userData.body = body;
+  return g;
+}

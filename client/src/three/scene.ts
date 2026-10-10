@@ -12,8 +12,8 @@ import { characterById } from '@standoff/shared';
 import { music, sfx } from '../audio';
 import { BANKS, Cutscene } from './cutscene';
 import {
-  ROOM, ROOM_H, SEAT_R, TABLE_R, TABLE_Y, buildCard, buildCharacter, buildCrown, buildLamp, buildLoot, buildRevolver, buildRoom,
-  buildTable, setCardFace, MAT, type CharacterRig, type RoomRig,
+  ROOM, ROOM_H, SEAT_R, TABLE_R, TABLE_Y, buildBossCigar, buildBullet, buildCharacter, buildHeistBag, markBulletPick, setBulletFace, buildLamp, buildLoot, buildRevolver, buildRoom,
+  buildTable, MAT, type CharacterRig, type RoomRig,
 } from './models';
 import { bloodTexture, bubbleCanvas, burstTexture, flagTexture, labelCanvas, smokeTexture, starTexture } from './textures';
 
@@ -43,7 +43,7 @@ interface Seat {
   tagKey: string;
   hand: THREE.Group;
   handKey: string;
-  loaded: THREE.Mesh;
+  loaded: THREE.Group;
   bandages: THREE.Mesh[];
   duck: number;
   slump: number;
@@ -69,7 +69,7 @@ interface Seat {
   smokeAt: number;
 }
 
-interface LootObj { id: string; group: THREE.Group; label: THREE.Sprite; home: THREE.Vector3; born: number; ring: THREE.Mesh; fly?: { from: THREE.Vector3; to: THREE.Vector3; start: number } }
+interface LootObj { id: string; group: THREE.Group; label: THREE.Sprite; home: THREE.Vector3; born: number; ring: THREE.Mesh; fly?: { from: THREE.Vector3; to: THREE.Vector3; start: number }; bagOrder?: number; landed?: boolean; kind: string }
 interface Fx { obj: THREE.Object3D; t: number; life: number; slow?: boolean; update: (k: number, dt: number) => void }
 interface Particle { mesh: THREE.Object3D; vel: THREE.Vector3; life: number; age: number; gravity: number; kind: 'blood' | 'smoke' | 'casing' | 'sweat'; grow?: number }
 
@@ -108,7 +108,13 @@ export class BarScene {
   private seats = new Map<string, Seat>();
   private rosterKey = '';
   private loot = new Map<string, LootObj>();
-  private myCards = new Map<string, THREE.Mesh>();
+  private myCards = new Map<string, THREE.Group>();
+  private viewCigar: THREE.Group;
+  private bag: THREE.Group | null = null;
+  private bagStart = Infinity;
+  private bagCount = 0;
+  private bagPuff = 0;
+  private viewSmokeAt = 0;
   private cardsRoot = new THREE.Group();
   private fx: Fx[] = [];
   private parts: Particle[] = [];
@@ -199,6 +205,13 @@ export class BarScene {
     this.viewGun.position.set(0.26, -0.7, -0.45);
     this.viewGun.visible = false;
     this.camera.add(this.viewGun);
+
+    // When you are the Boss, your own cigar sits at the bottom-left of your view.
+    this.viewCigar = buildBossCigar(1.4);
+    this.viewCigar.position.set(-0.3, -0.36, -0.62);
+    this.viewCigar.rotation.set(0.3, 0.75, 0.1);
+    this.viewCigar.visible = false;
+    this.camera.add(this.viewCigar);
 
     // "Marked" crosshair over your chosen target while the gun is still holstered.
     this.marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: markerTexture(), depthTest: false, transparent: true }));
@@ -351,6 +364,20 @@ export class BarScene {
     const alive = !!me && v!.players.find(x => x.id === v!.viewerId)?.alive === true;
     const fp = p < 0.5 && alive;
     const drawK = this.myArmed ? THREE.MathUtils.clamp((nowMs - this.myDrawStart) / DRAW_MS, 0, 1) : 0;
+    // Your Boss cigar: bottom-left, puffing away (hidden while ducking).
+    this.viewCigar.visible = alive && v!.bossId === v!.viewerId && myDuck < 0.5;
+    if (this.viewCigar.visible) {
+      // Portrait uses a much wider lens: tuck the cigar further away there.
+      const pk = this.portrait;
+      this.viewCigar.position.set(-0.3 - pk * 0.05, -0.36 - pk * 0.32 + Math.sin(nowMs / 900) * 0.008, -0.62 - pk * 0.75);
+      this.viewCigar.scale.setScalar(1.4 - pk * 0.2);
+      (this.viewCigar.userData.glow as THREE.PointLight).intensity = 0.5 + Math.sin(nowMs / 400) * 0.2;
+      if (nowMs > this.viewSmokeAt) {
+        this.viewSmokeAt = nowMs + 380 + Math.random() * 300;
+        const e = (this.viewCigar.userData.ember as THREE.Object3D).getWorldPosition(new THREE.Vector3());
+        this.spawnSmoke(e, new THREE.Vector3((Math.random() - 0.5) * 0.04, 0.16, (Math.random() - 0.5) * 0.04), 0.035, 2.2);
+      }
+    }
     this.viewGun.visible = fp && (this.myArmed || this.viewGun.position.y > -0.65);
     if (this.viewGun.visible) {
       if (this.myArmed && myTarget && myDuck < 0.5) {
@@ -410,11 +437,11 @@ export class BarScene {
       rig.root.add(tag);
 
       const hand = new THREE.Group();
-      hand.position.set(0, TABLE_Y + 0.035, 0.72);
+      hand.position.set(0, TABLE_Y + 0.004, 0.72);
       rig.root.add(hand);
-      const loaded = buildCard('BACK');
-      loaded.position.set(0.0, TABLE_Y + 0.04, 0.92);
-      loaded.rotation.z = Math.PI;
+      const loaded = buildBullet('BACK');
+      loaded.position.set(0.0, TABLE_Y + 0.004, 0.92);
+      loaded.scale.setScalar(1.3);
       loaded.visible = false;
       rig.root.add(loaded);
 
@@ -480,6 +507,7 @@ export class BarScene {
       cut.ready = true;
     });
     music.setMood('normal');
+    this.bagStart = Infinity; // the bag waits for the cutscene
     window.dispatchEvent(new CustomEvent('standoff:cutscene', { detail: { active: true, round, bank: BANKS[(round - 1) % BANKS.length] } }));
   }
 
@@ -489,6 +517,7 @@ export class BarScene {
     if (!this.cut) return;
     this.cut.dispose();
     this.cut = null;
+    if (this.bag) this.bagStart = performance.now();
     window.dispatchEvent(new CustomEvent('standoff:cutscene', { detail: { active: false } }));
   }
 
@@ -512,6 +541,7 @@ export class BarScene {
     if (v.phase === 'COURAGE') music.setMood('tense');
     else if (v.phase === 'SHOWDOWN') music.setMood('silent');
     else if (prev === 'SHOWDOWN' || v.phase === 'LOOT_REVEAL' || v.phase === 'LOAD') setTimeout(() => music.setMood('normal'), v.phase === 'SPLIT' ? 900 : 0);
+    if (v.phase === 'LOOT_REVEAL') this.dropBag();
     if (v.phase === 'LOOT_REVEAL') {
       // New heist: hats back on, clear the blood on the cloth (the floor keeps its stains).
       for (const d of this.tableDecals) this.scene.remove(d);
@@ -551,7 +581,13 @@ export class BarScene {
       if (!s) continue;
       this.drawTag(s, p, v, ui);
       for (let i = 0; i < s.bandages.length; i++) s.bandages[i].visible = p.alive && i < p.wounds;
-      if (p.id === v.bossId && !s.crown) { s.crown = buildCrown(); s.rig.crownAnchor.add(s.crown); }
+      // The Boss is whoever has the cigar clamped in his teeth.
+      if (p.id === v.bossId && !s.crown && !s.isMe) {
+        s.crown = buildBossCigar(1.15);
+        s.crown.position.set(0.075, -0.1, 0.29);
+        s.crown.rotation.set(0.22, 0.4, 0);
+        s.rig.head.add(s.crown);
+      }
       if (p.id !== v.bossId && s.crown) { s.crown.parent?.remove(s.crown); s.crown = null; }
       if (!s.isMe) {
         const hk = `${p.handCount}`;
@@ -559,11 +595,10 @@ export class BarScene {
           s.handKey = hk;
           s.hand.clear();
           for (let i = 0; i < p.handCount; i++) {
-            const c = buildCard('BACK');
-            c.rotation.z = Math.PI;
+            // Every rival round looks the same: nobody can count your BANGs.
+            const c = buildBullet('BACK');
             const f = i - (p.handCount - 1) / 2;
-            c.position.set(f * 0.035, i * 0.003, Math.abs(f) * 0.006);
-            c.rotation.y = f * 0.12;
+            c.position.set(f * 0.05, 0, Math.abs(f) * 0.008);
             s.hand.add(c);
           }
         }
@@ -571,8 +606,8 @@ export class BarScene {
       const showLoaded = (p.hasLoaded && !REVEAL.has(v.phase)) || (v.phase === 'SHOWDOWN' && !!p.revealedCard);
       s.loaded.visible = showLoaded && !s.isMe && p.alive;
       if (s.loaded.visible) {
-        if (REVEAL.has(v.phase) && p.revealedCard) setCardFace(s.loaded, p.revealedCard);
-        else setCardFace(s.loaded, 'BACK');
+        if (REVEAL.has(v.phase) && p.revealedCard) setBulletFace(s.loaded, p.revealedCard);
+        else setBulletFace(s.loaded, 'BACK');
       }
       (s.rig.ring.material as THREE.MeshBasicMaterial).color.set(v.phase === 'BOSS_PRIVILEGE' ? '#a77bf0' : '#ff3b2f');
     }
@@ -632,20 +667,21 @@ export class BarScene {
     for (const c of mine) {
       let m = this.myCards.get(c.id);
       if (!m) {
-        m = buildCard(c.kind);
-        m.userData.pick = { kind: 'card', id: c.id } satisfies Pick;
+        m = buildBullet(c.kind);   // only you see which of your rounds are live
+        markBulletPick(m, { kind: 'card', id: c.id } satisfies Pick);
+        m.scale.setScalar(1.25);
         this.cardsRoot.add(m);
         this.myCards.set(c.id, m);
-        m.position.set(0, TABLE_Y + 0.04, 0.6);
+        m.position.set(0, TABLE_Y + 0.004, 0.6);
       }
       if (v.me.loaded?.id === c.id) {
-        m.userData.home = new THREE.Vector3(0, TABLE_Y + 0.05, 0.92);
+        m.userData.home = new THREE.Vector3(0.16, TABLE_Y + 0.004, 0.78);
         m.userData.rot = new THREE.Euler(0, 0, 0);
       } else {
         const i = hand.findIndex(x => x.id === c.id);
         const f = i - (hand.length - 1) / 2;
-        m.userData.home = new THREE.Vector3(f * 0.075, TABLE_Y + 0.035 + Math.abs(f) * 0.002, 0.66 - Math.abs(f) * 0.012);
-        m.userData.rot = new THREE.Euler(-0.35, -f * 0.07, 0);
+        m.userData.home = new THREE.Vector3(f * 0.06, TABLE_Y + 0.004, 0.64 - Math.abs(f) * 0.008);
+        m.userData.rot = new THREE.Euler(0, 0, 0);
       }
     }
   }
@@ -703,7 +739,11 @@ export class BarScene {
         label.scale.set(0.25, 0.0625, 1);
         label.userData = { ctx, tex: t, key: '' };
         this.scene.add(group, label);
-        o = { id, group, label, home, born: performance.now() + i * 70, ring };
+        // During the reveal every item comes out of the heist bag, one at a time.
+        const fromBag = v.phase === 'LOOT_REVEAL';
+        const kind = c === 'NEW_BOSS' ? 'NEW_BOSS' : c.kind;
+        o = { id, group, label, home, born: performance.now() + i * 70, ring, kind, bagOrder: fromBag ? i : undefined, landed: !fromBag };
+        if (fromBag) { this.bagCount = Math.max(this.bagCount, i + 1); group.visible = false; }
         this.loot.set(id, o);
       }
       o.home = home;
@@ -721,6 +761,47 @@ export class BarScene {
         o.label.userData.key = text;
       }
     });
+  }
+
+  // ── Heist bag ─────────────────────────────────────────────────────────
+
+  private bagGap() { return Math.min(650, 5000 / Math.max(1, this.bagCount)); }
+
+  private dropBag() {
+    if (this.bag) { this.scene.remove(this.bag); }
+    this.bag = buildHeistBag();
+    this.bag.scale.setScalar(1.25);
+    this.scene.add(this.bag);
+    this.bagStart = this.cut ? Infinity : performance.now();
+    this.bagCount = [...this.loot.values()].filter(o => o.bagOrder !== undefined && !o.landed).length;
+    this.bagPuff = 0;
+  }
+
+  private animateBag(nowMs: number) {
+    const b = this.bag;
+    if (!b) return;
+    const t = nowMs - this.bagStart;
+    if (!isFinite(t) || t < 0) { b.visible = false; return; }
+    b.visible = true;
+    // Thrown onto the table, bounces, then empties itself.
+    const drop = Math.min(1, t / 450);
+    const y = drop < 1 ? (1 - drop) * (1 - drop) * 1.4 : Math.abs(Math.sin(Math.min(1, (t - 450) / 300) * Math.PI)) * 0.04 * (t < 750 ? 1 : 0);
+    b.position.set(0, TABLE_Y + y, 0);
+    if (drop >= 1 && !b.userData.thudded) { b.userData.thudded = true; sfx.thud(); }
+    b.rotation.y = Math.sin(nowMs / 1400) * 0.5;
+    // Each item out of the bag gives the neck a jolt.
+    const pk = (nowMs - this.bagPuff) / 260;
+    const neck = b.userData.neck as THREE.Group;
+    const body = b.userData.body as THREE.Mesh;
+    const jolt = pk >= 0 && pk < 1 ? Math.sin(pk * Math.PI) : 0;
+    neck.scale.set(1 + jolt * 0.35, 1 + jolt * 0.2, 1 + jolt * 0.35);
+    // The bag deflates as it empties, and vanishes once the last piece is out.
+    const done = this.bagCount > 0 ? 900 + this.bagCount * this.bagGap() + 500 : Infinity;
+    const empty = THREE.MathUtils.clamp((t - 900) / Math.max(1, done - 900), 0, 1);
+    body.scale.set(1 + jolt * 0.06, (0.92 - empty * 0.45) * (1 - jolt * 0.05), 0.85);
+    const gone = THREE.MathUtils.clamp((t - done) / 400, 0, 1);
+    b.scale.setScalar(1.25 * (1 - gone));
+    if (gone >= 1) { this.scene.remove(b); this.bag = null; }
   }
 
   // ── The showdown ───────────────────────────────────────────────────────
@@ -1108,8 +1189,31 @@ export class BarScene {
           if (k >= 1) { this.scene.remove(o.group, o.label); this.loot.delete(id); }
           continue;
         }
+        if (o.bagOrder !== undefined && !o.landed) {
+          // Popping out of the heist bag: hidden until its turn, then an arc from the bag mouth to its spot.
+          const gap = this.bagGap();
+          const start = this.bagStart + 900 + o.bagOrder * gap;
+          const fk = (nowMs - start) / 520;
+          o.label.visible = false;
+          if (fk < 0 || !this.bag) { o.group.visible = !this.bag; if (!this.bag) o.landed = true; continue; }
+          if (!o.group.visible) { o.group.visible = true; this.bagPuff = nowMs; sfx.swoosh(); }
+          const e = Math.min(1, fk);
+          const mouth = tmpV.set(0, TABLE_Y + 0.42, 0);
+          o.group.position.lerpVectors(mouth, o.home, e);
+          o.group.position.y += Math.sin(e * Math.PI) * 0.55;
+          o.group.scale.setScalar(0.35 + e * 0.75);
+          o.group.rotation.y += dt * 9 * (1 - e);
+          if (e >= 1) {
+            o.landed = true;
+            o.born = nowMs - 450;
+            o.group.rotation.y = Math.atan2(o.home.x, o.home.z);
+            if (o.kind === 'CASH') sfx.cash(); else if (o.kind === 'DIAMOND') sfx.clink(); else if (o.kind === 'NEW_BOSS') sfx.sting(); else sfx.thud();
+          }
+          continue;
+        }
         const k = THREE.MathUtils.clamp((nowMs - o.born) / 450, 0, 1);
         const bounce = k < 1 ? (1 - k) * (1 - k) * 1.6 + Math.abs(Math.sin(k * Math.PI * 2)) * (1 - k) * 0.12 : 0;
+        o.group.visible = true;
         o.group.position.set(o.home.x, o.home.y + bounce, o.home.z);
         const can = ui?.pickLoot.includes(id);
         const hovered = this.hover?.kind === 'loot' && this.hover.id === id;
@@ -1126,6 +1230,7 @@ export class BarScene {
       }
     }
 
+    this.animateBag(nowMs);
     this.animateParticles(fxSlow);
     this.fx = this.fx.filter(f => {
       f.t += f.slow ? fxSlow : fxDt;
@@ -1290,9 +1395,10 @@ export class BarScene {
       this.parts.push({ mesh: d, vel: new THREE.Vector3(0, 0.1, 0), life: 0.9, age: 0, gravity: 3, kind: 'sweat' });
     }
     // Cigar smoke.
-    if (rig.smoke && p.alive && time > s.smokeAt) {
-      s.smokeAt = time + 0.25 + Math.random() * 0.3;
-      this.spawnSmoke(rig.smoke.getWorldPosition(new THREE.Vector3()), new THREE.Vector3((Math.random() - 0.5) * 0.05, 0.22, (Math.random() - 0.5) * 0.05), 0.05, 2.8);
+    const ember = (s.crown?.userData.ember as THREE.Object3D | undefined) ?? rig.smoke;
+    if (ember && p.alive && time > s.smokeAt) {
+      s.smokeAt = time + 0.22 + Math.random() * 0.25;
+      this.spawnSmoke(ember.getWorldPosition(new THREE.Vector3()), new THREE.Vector3((Math.random() - 0.5) * 0.05, 0.22, (Math.random() - 0.5) * 0.05), 0.05, 2.8);
     }
     // Dazed stars.
     s.stars.visible = s.slump > 0.5;
@@ -1314,7 +1420,10 @@ export class BarScene {
     const marked = v.me?.target === p.id && v.phase === 'LOAD';
     ringMat.opacity = marked ? 0.9 : tappable ? (hovered ? 0.95 : 0.45 + Math.sin(time * 5) * 0.2) : 0;
     if (marked) ringMat.color.set('#ff2a1a');
-    if (s.crown) s.crown.rotation.y += dt * 0.8;
+    if (s.crown) {
+      const glow = s.crown.userData.glow as THREE.PointLight;
+      glow.intensity = 0.45 + Math.sin(time * 2.3) * 0.2 + Math.random() * 0.08; // ember breathing
+    }
     const sc = 1 + this.portrait * 0.3;
     s.tag.scale.set(0.62 * sc, 0.242 * sc, 1);
     s.tag.position.y = 2.02 - s.duck * 0.3 - s.fall * 1.2;

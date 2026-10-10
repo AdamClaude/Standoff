@@ -16,7 +16,8 @@ export function Scene3D({ v, ui, phaseEndsAt }: { v: ClientView; ui: SceneUI; ph
   // Each new heist opens with the crew hitting the bank (leaves ~1.2 s to look at the loot after).
   const cutRound = useRef(0);
   useEffect(() => {
-    if (v.phase !== 'LOOT_REVEAL' || cutRound.current === v.round || ui.reducedMotion) return;
+    // The getaway cutscene plays once, at the very start of the game.
+    if (v.phase !== 'LOOT_REVEAL' || v.round !== 1 || cutRound.current === v.round || ui.reducedMotion) return;
     cutRound.current = v.round;
     const left = phaseEndsAt - serverNow();
     // A stale or missing deadline still gets a full cutscene; the phase change cuts it short anyway.

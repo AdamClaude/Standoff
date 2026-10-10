@@ -295,10 +295,10 @@ function validTarget(s: GameState, shooter: Player, targetId: PlayerId) {
   if (!t.alive) throw new GameError('BAD_TARGET', 'target is dead');
 }
 
-/** Players the Boss may order to switch target: alive, not the Boss, aiming, with an alternative. */
+/** Players the Boss may order to switch target (the Boss may pick himself): alive, aiming, with an alternative. */
 export function redirectCandidates(s: GameState): PlayerId[] {
   return alive(s)
-    .filter(p => p.id !== s.bossId && p.target !== null)
+    .filter(p => p.target !== null)
     .filter(p => retargetOptions(s, p.id, p.target).length > 0)
     .map(p => p.id);
 }
@@ -470,7 +470,8 @@ function resolveCourage(s: GameState) {
   const woundMap: Record<PlayerId, number> = {};
   for (const [tid, n] of Object.entries(incoming)) {
     const t = getPlayer(s, tid);
-    const real = powers.modifyIncomingWounds(s, t, n);
+    // House rule: however many bullets land, a gangster takes at most one wound per round.
+    const real = Math.min(1, powers.modifyIncomingWounds(s, t, n));
     if (real > 0) {
       t.wounds += real;
       t.hitThisRound = real;

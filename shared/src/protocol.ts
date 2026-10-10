@@ -23,11 +23,15 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   botTakeover: true,
 };
 
+/** Loot reveal: ~7 s of loot spilling from the bag; the first heist adds the ≤ 9 s getaway cutscene. */
+export const LOOT_REVEAL_MS = 8000;
+export const LOOT_REVEAL_FIRST_MS = 17000;
+
 /** Phase durations in ms. SPLIT is per pick; PENDING is any Clip/Smart choice. */
 export type TimerKey = Exclude<Phase, 'GAME_OVER'> | 'PENDING';
 
 const NORMAL: Record<TimerKey, number> = {
-  LOOT_REVEAL: 10000,  // round-start cutscene (≤ 9 s, skippable) then a look at the loot
+  LOOT_REVEAL: 8000,   // the loot pours out of the heist bag (see LOOT_REVEAL_MS)
   LOAD: 12000,      // pick a bullet AND a target, secretly; '3… 2… 1… DRAW!'
   HOLD_UP: 4500,       // "3… 2… 1… AIM!"
   KID_AIM: 6000,

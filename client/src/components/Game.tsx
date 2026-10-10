@@ -13,6 +13,8 @@ import { Chat } from './Chat';
 import { Rules } from './Rules';
 import { EndScreen } from './EndScreen';
 import { Coach } from './Coach';
+import { Crown } from './Table';
+import { DIAMOND_BONUS, PAINTING_VALUES } from '@standoff/engine';
 
 export function Game() {
   useLang();
@@ -120,6 +122,7 @@ export function Game() {
       {cut ? <CutsceneOverlay cut={cut} rounds={v.rounds} /> : <StepBanner v={v} />}
       {v.phase === 'LOOT_REVEAL' && <p className="rotate-hint">{t('rotateHint')}</p>}
       <Tray v={v} tray={tray} />
+      {!cut && <LootGuide v={v} />}
 
       <Coach v={v} />
 
@@ -277,7 +280,7 @@ function Crew({ v }: { v: ClientView }) {
     <ul className="crew" aria-label={t('seats')}>
       {order.map(p => (
         <li key={p.id} className={`${p.alive ? '' : 'is-out'}${p.id === v.viewerId ? ' is-me' : ''}${v.currentPicker === p.id ? ' is-picking' : ''}`}>
-          <span className="crew-name">{p.id === v.bossId ? '♛ ' : ''}{p.name}</span>
+          <span className="crew-name">{p.id === v.bossId && <span className="crew-cigar" title={t('boss')}><Crown /></span>}{p.name}</span>
           <span className="crew-hp">{Array.from({ length: p.woundLimit }, (_, i) => <i key={i} className={i < p.woundLimit - p.wounds ? 'ok' : ''} />)}</span>
           <span className="crew-shots" title={t('shotsFired', { n: p.shotsFired })}>{'▮'.repeat(p.shotsFired)}<em>{'▮'.repeat(Math.max(0, 3 - p.shotsFired))}</em></span>
           <span className="crew-loot">◆ {p.lootCount}</span>
@@ -377,3 +380,31 @@ function useGameSounds(v: ClientView) {
 }
 
 export { nameOf };
+
+/** Bottom-left card with what the loot is worth; pops up at every split, can be closed and reopened. */
+function LootGuide({ v }: { v: ClientView }) {
+  const [open, setOpen] = useState(true);
+  useEffect(() => { if (v.phase === 'SPLIT') setOpen(true); }, [v.round, v.phase === 'SPLIT']); // eslint-disable-line react-hooks/exhaustive-deps
+  if (v.phase !== 'SPLIT') return null;
+  if (!open) {
+    return <button className="loot-guide-chip" onClick={() => setOpen(true)} aria-label={t('lootGuide')}>💎 {t('lootGuideShort')}</button>;
+  }
+  const k = (n: number) => `$${n / 1000}k`;
+  return (
+    <aside className="loot-guide" role="note" aria-label={t('lootGuide')}>
+      <header>
+        <b>{t('lootGuide')}</b>
+        <button className="loot-guide-x" onClick={() => setOpen(false)} aria-label={t('close')}>✕</button>
+      </header>
+      <p><span aria-hidden="true">💎</span> {t('guideDiamonds', { bonus: k(DIAMOND_BONUS) })}</p>
+      <p><span aria-hidden="true">🖼️</span> {t('guidePaintings')}</p>
+      <table className="loot-guide-paint">
+        <tbody>
+          <tr>{PAINTING_VALUES.slice(1, 9).map((_, i) => <th key={i}>×{i + 1}</th>)}</tr>
+          <tr>{PAINTING_VALUES.slice(1, 9).map((val, i) => <td key={i}>{val / 1000}k</td>)}</tr>
+        </tbody>
+      </table>
+      <p><span aria-hidden="true">💵</span> {t('guideCash')}</p>
+    </aside>
+  );
+}

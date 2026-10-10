@@ -1,9 +1,9 @@
-// Round-start cutscene: the crew roars up in a getaway car, sprints into the bank,
-// kicks the doors in, and cash comes flying out. ~7 seconds, procedural, skippable.
+// Game-start cutscene: the bank doors burst open, the crew sprints out with heist bags,
+// piles into the getaway car and tears off into the night. ≤ 9 seconds, procedural, skippable.
 import * as THREE from 'three';
 import { characterById } from '@standoff/shared';
 import { sfx } from '../audio';
-import { MAT, buildCharacter, type CharacterRig } from './models';
+import { MAT, buildCharacter, buildHeistBag, type CharacterRig } from './models';
 import { cashTexture, labelCanvas, tileTexture, woodTexture } from './textures';
 
 export const BANKS = [
@@ -17,7 +17,7 @@ const box = (w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z
   const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); return b;
 };
 
-interface Runner { rig: CharacterRig; group: THREE.Group; legs: THREE.Group[]; start: THREE.Vector3; delay: number; lane: number }
+interface Runner { rig: CharacterRig; group: THREE.Group; legs: THREE.Group[]; start: THREE.Vector3; end: THREE.Vector3; delay: number; bag: THREE.Group }
 
 export class Cutscene {
   scene = new THREE.Scene();
@@ -35,6 +35,8 @@ export class Cutscene {
   private bills: { m: THREE.Mesh; v: THREE.Vector3; spin: THREE.Vector3 }[] = [];
   private cues = new Set<string>();
   private billMat: THREE.MeshStandardMaterial;
+  private puffs: { m: THREE.Mesh; age: number }[] = [];
+  private puffMat = new THREE.MeshStandardMaterial({ color: '#8a8478', transparent: true, opacity: 0.5, depthWrite: false, roughness: 1 });
 
   constructor(public round: number, avatars: string[], duration: number) {
     this.duration = duration;
@@ -42,9 +44,12 @@ export class Cutscene {
     s.background = new THREE.Color('#0a0e1a');
     s.fog = new THREE.Fog('#0a0e1a', 14, 46);
     s.add(new THREE.HemisphereLight('#4a5a80', '#120c08', 0.6));
-    const moon = new THREE.DirectionalLight('#9fb4ff', 0.6);
-    moon.position.set(-10, 20, 10);
+    const moon = new THREE.DirectionalLight('#9fb4ff', 1.2);
+    moon.position.set(-10, 20, 14);
     s.add(moon);
+    const fill = new THREE.DirectionalLight('#ffd6a0', 1.1);   // shop-window glow from across the street
+    fill.position.set(6, 4, 16);
+    s.add(fill);
 
     // Street, kerb and pavement (wet and shiny).
     const road = new THREE.Mesh(new THREE.PlaneGeometry(80, 14), std('#15171c', { roughness: 0.25, metalness: 0.3 }));
@@ -135,9 +140,14 @@ export class Cutscene {
       s.add(post);
     }
 
-    // Getaway car: a long black 1930s sedan.
+    // A warm lamp over the kerb so the getaway reads from the bank steps too.
+    const kerbLight = new THREE.PointLight('#ffc890', 28, 11, 1.4);
+    kerbLight.position.set(1.5, 4.2, -0.5);
+    s.add(kerbLight);
+
+    // Getaway car: a long 1930s sedan.
     this.car = new THREE.Group();
-    const paint = std('#0d0d10', { metalness: 0.6, roughness: 0.25 });
+    const paint = std('#4a1219', { metalness: 0.35, roughness: 0.3 });   // deep wine sedan
     this.car.add(box(4.6, 0.7, 1.8, paint, 0, 0.8, 0));
     this.car.add(box(2.4, 0.75, 1.65, paint, -0.3, 1.5, 0));
     this.car.add(box(2.3, 0.45, 1.7, new THREE.MeshStandardMaterial({ color: '#2a3550', metalness: 0.9, roughness: 0.05 }), -0.3, 1.55, 0)); // windows
@@ -148,6 +158,12 @@ export class Cutscene {
       hl.position.set(2.95, 1.15, z);
       this.car.add(hl);
     }
+    for (const z of [-0.65, 0.65]) {
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.2), new THREE.MeshBasicMaterial({ color: '#ff2a1a', toneMapped: false }));
+      tl.position.set(-2.32, 1.0, z);
+      this.car.add(tl);
+    }
+    this.car.add(box(4.65, 0.06, 1.82, MAT.chrome, 0, 1.16, 0)); // chrome trim line
     const beam = new THREE.SpotLight('#fff0c0', 40, 16, 0.5, 0.5, 1.2);
     beam.position.set(3, 1.1, 0);
     beam.target.position.set(10, 0, 0);
@@ -162,7 +178,7 @@ export class Cutscene {
       this.wheels.push(w);
     }
     for (const z of [-0.95, 0.95]) this.car.add(box(4.4, 0.08, 0.35, paint, 0, 0.55, z)); // running boards
-    this.car.position.set(-30, 0, 2.2);
+    this.car.position.set(0, 0, 2.2); // parked at the kerb, engine running
     s.add(this.car);
 
     // The crew (up to four of the players at the table).
@@ -188,12 +204,18 @@ export class Cutscene {
       }
       rig.gun.visible = true;
       rig.glass.visible = false;
-      group.rotation.y = Math.PI; // face the bank (−z)
-      const start = new THREE.Vector3(-1.2 + i * 0.9, 0, 2.2 + (i % 2 ? 0.9 : -0.9));
+      // A fat $ bag in the left hand (kept upright against the arm's swing in update()).
+      const bag = buildHeistBag();
+      bag.scale.setScalar(1.25);
+      bag.position.set(-0.55, 0.3, 0.08);   // swinging from the left hand, clear of the body
+      rig.body.add(bag);
+      const lane = -1.2 + i * 0.85;
+      const start = new THREE.Vector3(lane * 0.7, 1.0, -9.0);           // in the doorway
+      const end = new THREE.Vector3(-1.5 + i * 1.0, 0, 1.15);            // beside the car
       group.position.copy(start);
       group.visible = false;
       s.add(group);
-      this.runners.push({ rig, group, legs, start, delay: i * 0.12, lane: -1.4 + i * 0.95 });
+      this.runners.push({ rig, group, legs, start, end, delay: i * 0.16, bag });
     });
 
     // Banknotes for the getaway.
@@ -209,53 +231,67 @@ export class Cutscene {
     const T = this.t, D = this.duration;
     // Timeline scales with the available duration (6–9 s).
     const k = D / 7;
-    const tCar = 1.4 * k, tOut = 1.7 * k, tRun = 4.3 * k, tDoor = 4.6 * k;
+    const tDoor = 0.45 * k, tOut = 0.8 * k, tCar = 3.5 * k, tGo = 4.1 * k;
+    this.cue('alarm', 0, () => sfx.alarm(Math.max(1, D * 0.75)));
 
-    // Car roars in and skids to a stop.
-    const ce = Math.min(1, T / tCar);
-    const ease = 1 - Math.pow(1 - ce, 3);
-    this.car.position.x = -30 + 30 * ease;
-    this.car.rotation.y = ce < 1 ? Math.sin(ce * Math.PI) * -0.08 : 0;
-    this.car.position.y = ce >= 1 && T < tCar + 0.25 ? Math.sin((T - tCar) * 25) * 0.03 : 0;
-    for (const w of this.wheels) w.rotation.y += dt * (1 - ease) * 30;
-    this.cue('car', 0, () => sfx.car());
+    // Doors blown open: flash, alarm, money everywhere.
+    const dk = THREE.MathUtils.clamp((T - tDoor) / 0.25, 0, 1);
+    this.doors[0].rotation.y = -dk * 1.6;
+    this.doors[1].rotation.y = dk * 1.6;
+    this.flash.intensity = T > tDoor ? Math.max(8, 60 * (1 - (T - tDoor) / 0.8)) : 0;
+    const on = Math.floor(T * 6) % 2 === 0;
+    this.alarm.intensity = on ? 30 : 4;
+    (this.alarmLamp.material as THREE.MeshBasicMaterial).color.set(on ? '#ff3020' : '#550000');
+    if (T > tDoor && T < tCar && this.bills.length < 70) for (let i = 0; i < 2; i++) this.spawnBill();
+    this.cue('doors', tDoor, () => { sfx.doors(); setTimeout(() => sfx.bang(0.8), 120); });
 
-    // Crew piles out and runs for the doors.
+    // The crew sprints down the steps with the bags and dives into the car.
     for (const r of this.runners) {
       const tt = T - tOut - r.delay;
-      r.group.visible = tt > 0;
-      if (tt <= 0) continue;
-      const runK = Math.min(1, tt / (tRun - tOut));
-      const from = r.start;
-      const to = new THREE.Vector3(r.lane * 0.6, 0, -9.0);
-      const p = runK < 1 ? runK : 1;
-      r.group.position.lerpVectors(from, to, p);
-      // climb the steps
-      if (r.group.position.z < -7) r.group.position.y = Math.min(1, (-7 - r.group.position.z) * 0.5);
-      const cycle = tt * 13;
+      const runK = tt / (tCar - tOut - 0.25);
+      r.group.visible = tt > 0 && runK < 1.35;
+      if (!r.group.visible) continue;
+      const p = Math.min(1, runK);
+      r.group.position.lerpVectors(r.start, r.end, p);
+      const z = r.group.position.z;
+      r.group.position.y = z < -7 ? Math.min(1, (-7 - z) * 0.5) : 0;   // down the steps
+      r.group.rotation.y = Math.atan2(r.end.x - r.start.x, r.end.z - r.start.z) * 0.6;
       const running = runK < 1;
+      const cycle = tt * 13;
       r.legs[0].rotation.x = running ? Math.sin(cycle) * 0.9 : 0;
       r.legs[1].rotation.x = running ? -Math.sin(cycle) * 0.9 : 0;
       r.rig.body.position.y = 0.33 + (running ? Math.abs(Math.sin(cycle)) * 0.07 : 0);
-      r.rig.body.rotation.x = running ? 0.18 : 0;
-      r.rig.armPivot.rotation.set(running ? 0.5 + Math.sin(cycle) * 0.4 : 0.2, -0.1, 0);   // gun forward
-      r.rig.leftPivot.rotation.set(running ? 1.4 - Math.sin(cycle) * 0.7 : 1.4, 0.2, 0);    // swinging arm
-      r.group.visible = runK < 1 || T < tDoor + 0.3; // they vanish inside
+      r.rig.body.rotation.x = running ? 0.22 : 0;
+      r.rig.armPivot.rotation.set(running ? -0.6 + Math.sin(cycle) * 0.25 : 0.2, -0.1, 0); // gun waving
+      r.rig.leftPivot.rotation.set(running ? 1.25 + Math.sin(cycle) * 0.15 : 1.3, -0.5, 0); // arm down to the bag
+      r.bag.rotation.set(-r.rig.body.rotation.x + (running ? Math.sin(cycle) * 0.25 : 0), 0.3, running ? Math.cos(cycle) * 0.12 : 0);
+      if (runK >= 1) {
+        // Hop in: up, over the running board, gone.
+        const h = Math.min(1, (runK - 1) / 0.35);
+        r.group.position.z += h * 1.1;
+        r.group.position.y += Math.sin(h * Math.PI) * 0.4;
+        r.group.scale.setScalar(1 - h * 0.6);
+      }
     }
-    this.cue('steps', tOut, () => sfx.steps(Math.round(14 * k), 0.17));
+    this.cue('steps', tOut, () => sfx.steps(Math.round(13 * k), 0.17));
+    this.cue('shot', tOut + 0.9 * k, () => sfx.bang(0.55));   // one into the air, for style
+    this.cue('slam', tCar, () => sfx.thud());
 
-    // Doors kicked in: flash, alarm, money everywhere.
-    if (T > tDoor) {
-      const dk = Math.min(1, (T - tDoor) / 0.25);
-      this.doors[0].rotation.y = -dk * 1.6;
-      this.doors[1].rotation.y = dk * 1.6;
-      this.flash.intensity = Math.max(0, 60 * (1 - (T - tDoor) / 0.8));
-      const on = Math.floor(T * 6) % 2 === 0;
-      this.alarm.intensity = on ? 30 : 4;
-      (this.alarmLamp.material as THREE.MeshBasicMaterial).color.set(on ? '#ff3020' : '#550000');
-      if (this.bills.length < 70 && T < D - 0.6) for (let i = 0; i < 3; i++) this.spawnBill();
+    // Floor it.
+    const gk = Math.max(0, (T - tGo) / Math.max(0.5, D - tGo));
+    this.car.position.x = 34 * gk * gk;
+    this.car.rotation.z = T > tGo ? Math.min(0.04, gk * 0.4) * (1 - gk) : 0;          // squat on take-off
+    this.car.position.y = T < tGo && T > tCar ? Math.sin(T * 40) * 0.015 : 0;          // engine idling hard
+    for (const w of this.wheels) w.rotation.y -= dt * (T > tGo ? 30 + gk * 60 : 0);
+    this.cue('car', tGo - 0.15, () => sfx.car());
+    if (T > tGo && gk < 0.7 && Math.random() < 0.7) this.spawnPuff();
+    for (const p of this.puffs) {
+      p.age += dt;
+      p.m.scale.setScalar(0.3 + p.age * 1.6);
+      p.m.position.y += dt * 0.4;
+      (p.m.material as THREE.MeshStandardMaterial).opacity = Math.max(0, 0.5 - p.age * 0.45);
     }
-    this.cue('doors', tDoor, () => { sfx.doors(); setTimeout(() => sfx.alarm(Math.max(1, (D - tDoor) * 0.8)), 150); setTimeout(() => sfx.bang(0.8), 350); });
+
     for (const b of this.bills) {
       b.v.y -= 2.2 * dt;
       b.v.multiplyScalar(1 - dt * 0.9);
@@ -264,8 +300,15 @@ export class Cutscene {
       if (b.m.position.y < 0.15) { b.m.position.y = 0.15; b.v.set(0, 0, 0); b.spin.set(0, 0, 0); }
     }
 
-    this.shoot(T, k, tCar, tOut, tRun, tDoor);
+    this.shoot(T, tOut, tCar, tGo);
     return T < D;
+  }
+
+  private spawnPuff() {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), this.puffMat.clone());
+    m.position.set(this.car.position.x - 2.5, 0.35, this.car.position.z + (Math.random() - 0.5) * 1.2);
+    this.scene.add(m);
+    this.puffs.push({ m, age: 0 });
   }
 
   private spawnBill() {
@@ -279,26 +322,31 @@ export class Cutscene {
     });
   }
 
-  /** Camera: wide establishing shot → low tracking shot on the crew → front of the bank. */
-  private shoot(T: number, k: number, tCar: number, tOut: number, tRun: number, tDoor: number) {
+  /** Camera: doors burst → the crew sprints toward us with the bags → the car tears away. */
+  private shoot(T: number, tOut: number, tCar: number, tGo: number) {
     const cam = this.camera;
     const lead = this.runners[0]?.group.position ?? new THREE.Vector3();
-    if (T < tCar + 0.3) {
-      const a = T / (tCar + 0.3);
-      cam.position.set(12 - a * 4, 2.2 + a * 0.6, 12 - a * 2);
-      cam.lookAt(this.car.position.x * 0.6, 1.4, 0);
-    } else if (T < tRun) {
-      const a = (T - tCar - 0.3) / Math.max(0.1, tRun - tCar - 0.3);
-      // high enough to look over the car roof
-      cam.position.set(6 - a * 3, 2.4 + a * 0.3, lead.z + 5 - a * 1.5);
-      cam.lookAt(lead.x, 1.1 + a * 1.4, lead.z - 2);
+    if (T < tOut + 0.5) {
+      const a = T / (tOut + 0.5);
+      cam.position.set(7 - a * 2.5, 2.4 + a * 0.4, 10 - a * 2);
+      cam.lookAt(0, 3.8 - a * 0.8, -8.5);
+    } else if (T > tCar - 0.9 && T < tGo + 0.2) {
+      // From the pavement: the crew piles into the car.
+      const a = (T - tCar + 0.9) / Math.max(0.1, tGo + 0.2 - tCar + 0.9);
+      cam.position.set(4.8 - a * 0.8, 2.4 - a * 0.3, -4.2 + a * 0.4);
+      cam.lookAt(0, 1.0, 1.8);
+    } else if (T < tGo + 0.2) {
+      // Between the bank and the car, so the car never blocks the run.
+      const a = (T - tOut - 0.5) / Math.max(0.1, tGo + 0.2 - tOut - 0.5);
+      cam.position.set(5.2 - a * 1.2, 1.5 + a * 0.3, 0.6 + a * 0.2);
+      cam.lookAt(lead.x * 0.6, 1.2, Math.min(lead.z, 0) - 1.5);
     } else {
-      const a = Math.min(1, (T - tRun) / Math.max(0.1, this.duration - tRun));
-      // stand in front of the parked car so it never blocks the doors
-      cam.position.set(Math.sin(a * 1.2) * 1.5, 1.4 + a * 1.4, 0.6 - a * 1.6);
-      cam.lookAt(0, 3.6 + a * 1.6, -8.5);
+      // Low by the kerb: the car roars past and away.
+      const a = Math.min(1, (T - tGo - 0.2) / Math.max(0.1, this.duration - tGo - 0.2));
+      cam.position.set(3 + a * 3, 1.6 + a * 0.8, 10);
+      cam.lookAt(Math.max(this.car.position.x * 0.85, 1), 1, 2.2);
     }
-    void k; void tOut; void tDoor;
+    void tCar;
   }
 
   private cue(name: string, at: number, fn: () => void) {
@@ -306,6 +354,7 @@ export class Cutscene {
   }
 
   dispose() {
+    for (const p of this.puffs) (p.m.material as THREE.Material).dispose();
     this.scene.traverse(o => {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();

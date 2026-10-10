@@ -136,6 +136,18 @@ describe('boss privilege', () => {
     expect(s.phase).toBe('COURAGE');
   });
 
+  it('the Boss may order himself to switch aim', () => {
+    const s = newGame(4, {}, 'p0');
+    loadAll(s);
+    aim(s, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p2' }, { bossPass: false });
+    apply(s, { type: 'BOSS_REDIRECT', playerId: 'p0', target: 'p0' });
+    expect(s.phase).toBe('REDIRECT');
+    expect(err(() => apply(s, { type: 'RETARGET', playerId: 'p0', target: 'p1' }))).toBe('SAME_TARGET');
+    apply(s, { type: 'RETARGET', playerId: 'p0', target: 'p3' });
+    expect(P(s, 'p0').target).toBe('p3');
+    expect(s.phase).toBe('COURAGE');
+  });
+
   it('redirect timeout picks a random valid target', () => {
     for (let i = 0; i < 10; i++) {
       const s = newGame(5, {}, 'p0');
@@ -182,10 +194,10 @@ describe('courage & showdown', () => {
     expect(P(s, 'p0').publicBangsRevealed).toBe(1);
   });
 
-  it('two BANGs on one player → two wounds; wounded get no loot', () => {
+  it('two BANGs on one player → still one wound this round; wounded get no loot', () => {
     const s = newGame();
     playRound(s, { p0: 'BANG', p2: 'BANG' }, { p0: 'p1', p2: 'p1', p1: 'p3', p3: 'p0' });
-    expect(P(s, 'p1').wounds).toBe(2);
+    expect(P(s, 'p1').wounds).toBe(1);
     finishSplit(s);
     expect(P(s, 'p1').loot).toHaveLength(0);
   });
