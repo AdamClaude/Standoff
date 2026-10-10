@@ -25,7 +25,7 @@ export function App() {
       {!session && <Home />}
       {session && !game && <Lobby />}
       {inGame && <Game />}
-      {session && game?.view.phase !== 'GAME_OVER' && <ChatTicker />}
+      {session && !game && <ChatTicker />}
       {!connected && <div className="banner" role="status">{t('reconnecting')}</div>}
       {toast && <div className="toast" role="alert">{toast in TOASTS ? t(TOASTS[toast]) : toast}</div>}
     </>

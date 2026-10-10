@@ -43,7 +43,7 @@ export function Game() {
     if (v.phase === 'LOAD' && remaining > 0 && !(m.power === 'KID' && v.settings.powers)) {
       seatAction = {
         ids: others(),
-        onPick: id => api.act({ type: 'AIM', target: v.me!.target === id ? null : id }),
+        onPick: id => { sfx.mark(); api.act({ type: 'AIM', target: v.me!.target === id ? null : id }); },
         label: p => t('aimingAt', { name: p.name }),
       };
     } else if (v.phase === 'KID_AIM' && m.power === 'KID') {
@@ -99,7 +99,7 @@ export function Game() {
             onPickLoot: lootAction?.onPick,
             selectedLoot: lootAction?.selected ?? [],
             reducedMotion: reduced,
-            labels: { boss: t('boss'), out: t('dead'), you: t('you') },
+            labels: { boss: t('boss'), out: t('dead'), you: t('you'), marked: t('marked'), whacked: t('whacked') },
             lootLabel: (c: LootCard | 'NEW_BOSS') => c === 'NEW_BOSS' ? t('newBossToken') : c.kind === 'CASH' || c.kind === 'DIAMOND' ? `$${c.value / 1000}k` : itemLabel(c),
           }}
         />
@@ -113,6 +113,9 @@ export function Game() {
       </div>
 
       <Crew v={v} />
+      <div className={`letterbox${v.phase === 'SHOWDOWN' ? ' is-on' : ''}`} aria-hidden="true"><i /><i /></div>
+      <HitSplat />
+      <TitleCard v={v} />
       {v.phase === 'LOOT_REVEAL' && <p className="rotate-hint">{t('rotateHint')}</p>}
       <Tray v={v} tray={tray} />
 
@@ -126,6 +129,11 @@ export function Game() {
             <label className="setting toggle">
               <span className="setting-label">{t('sound')}</span>
               <input type="checkbox" defaultChecked={!sound.muted} onChange={e => sound.setMuted(!e.target.checked)} />
+              <span className="switch" aria-hidden="true" />
+            </label>
+            <label className="setting toggle">
+              <span className="setting-label">{t('musicLabel')}</span>
+              <input type="checkbox" defaultChecked={sound.music} onChange={e => sound.setMusic(e.target.checked)} />
               <span className="switch" aria-hidden="true" />
             </label>
             <label className="setting">
@@ -143,6 +151,53 @@ export function Game() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Blood running down your screen when you take a bullet. */
+function HitSplat() {
+  const [hits, setHits] = useState<number[]>([]);
+  useEffect(() => {
+    const on = () => {
+      const id = Date.now();
+      setHits(h => [...h, id]);
+      setTimeout(() => setHits(h => h.filter(x => x !== id)), 2600);
+    };
+    window.addEventListener('standoff:hit-me', on);
+    return () => window.removeEventListener('standoff:hit-me', on);
+  }, []);
+  if (!hits.length) return null;
+  return (
+    <div className="hit-splat" aria-hidden="true">
+      {hits.map(h => (
+        <svg key={h} viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+          <g fill="#8a0b0b">
+            <circle cx="120" cy="90" r="46" /><circle cx="300" cy="70" r="30" /><circle cx="230" cy="160" r="22" />
+            {[0, 1, 2, 3, 4, 5, 6, 7].map(i => <rect key={i} className="drip" x={70 + i * 38} y={60 + (i % 3) * 20} width={8 + (i % 3) * 4} height={70 + (i % 4) * 40} rx="6" style={{ animationDelay: `${i * 60}ms` }} />)}
+            {[0, 1, 2, 3, 4, 5].map(i => <circle key={`d${i}`} cx={40 + i * 64} cy={30 + (i % 2) * 180} r={6 + (i % 3) * 5} />)}
+          </g>
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/** Film-noir title card at the start of each heist. */
+function TitleCard({ v }: { v: ClientView }) {
+  const [shown, setShown] = useState<number | null>(null);
+  useEffect(() => {
+    if (v.phase !== 'LOOT_REVEAL') return;
+    setShown(v.round);
+    const id = setTimeout(() => setShown(null), 2200);
+    return () => clearTimeout(id);
+  }, [v.round, v.phase]);
+  if (shown === null) return null;
+  return (
+    <div className="title-card" aria-hidden="true">
+      <small>{t('heistWord')}</small>
+      <b>{shown}</b>
+      <small>{t('ofTotal', { total: v.rounds })}</small>
     </div>
   );
 }
@@ -218,15 +273,9 @@ function useGameSounds(v: ClientView) {
     last.current.logLen = v.log.length;
     if (prev === 0) return;
     for (const e of fresh) {
-      if (e.t === 'SHOWDOWN') {
-        const bangs = e.reveals.filter(r => r.card === 'BANG').length;
-        if (bangs) { sfx.bang(); if (bangs > 1) setTimeout(() => sfx.bang(), 140); }
-        else if (e.reveals.length) sfx.click();
-      }
       if (e.t === 'PICK' && e.playerId !== v.viewerId) sfx.cash();
-      if (e.t === 'ROUND_START') sfx.swoosh();
-      if (e.t === 'ELIMINATED') sfx.sting();
-      if (e.t === 'COURAGE' && Object.values(e.stances).some(s => s === 'STAND')) setTimeout(() => sfx.banzai(), 60);
+      if (e.t === 'ROUND_START') sfx.sting();
+      if (e.t === 'COURAGE' && Object.values(e.stances).some(s => s === 'DUCK')) setTimeout(() => sfx.thud(), 60);
     }
   }, [v.log.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -235,7 +284,7 @@ function useGameSounds(v: ClientView) {
     if (!v.viewerId) return;
     const on = gunsOn(v, v.viewerId).map(p => p.id);
     const newOnes = on.filter(id => !last.current.targetsOnMe.includes(id));
-    if (newOnes.length && v.phase !== 'LOAD' && v.phase !== 'SHOWDOWN') sfx.swoosh();
+    if (newOnes.length && (v.phase === 'REDIRECT' || v.phase === 'KID_AIM')) sfx.swoosh();
     last.current.targetsOnMe = on;
   });
 

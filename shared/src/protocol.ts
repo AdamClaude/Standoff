@@ -82,7 +82,7 @@ export interface ChatMessage {
   at: number;
 }
 
-export const TAUNTS = ['LOADED', 'TRY_ME', 'NOT_TODAY', 'BOSS_A_WORD', 'TRUCE', 'LIAR', 'NOTHING_PERSONAL', 'BANZAI'] as const;
+export const TAUNTS = ['LOADED', 'TRY_ME', 'NOT_TODAY', 'BOSS_A_WORD', 'TRUCE', 'LIAR', 'NOTHING_PERSONAL', 'CAPISCE', 'BUSINESS', 'FORGET_IT', 'MY_MONEY', 'BADA_BING', 'FAMILY', 'BANZAI'] as const;
 export type TauntKey = (typeof TAUNTS)[number];
 export const REACTIONS = ['😂', '😱', '😈', '🤝', '💀', '💰', '🔫', '🙏'] as const;
 

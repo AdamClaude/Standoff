@@ -218,6 +218,7 @@ export class Room {
       return;
     }
     this.scheduleBots();
+    this.botChatter();
   }
 
   private armTimer() {
@@ -267,6 +268,53 @@ export class Room {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+
+  // ── Bot table talk ─────────────────────────────────────────────────────
+  private chatterSeq = -1;
+  private botChatter() {
+    const s = this.state;
+    if (!s || s.phaseSeq === this.chatterSeq) return;
+    this.chatterSeq = s.phaseSeq;
+    const bots = this.seats.filter(x => (x.isBot || x.takenOverByBot) && s.players.find(p => p.id === x.playerId)?.alive);
+    if (!bots.length) return;
+    const pick = <T,>(arr: T[]) => arr[Math.floor(this.rand() * arr.length)];
+    let budget = 2;
+    const say = (seat: SeatState, taunt: string, delay: number) => {
+      if (budget-- <= 0) return;
+      setTimeout(() => {
+        if (!this.state) return;
+        const m = this.addChat(seat, '', taunt);
+        this.hooks.sendChat(m);
+      }, delay * this.hooks.timeScale);
+    };
+    const seatOf = (id: string) => bots.find(b => b.playerId === id);
+    switch (s.phase) {
+      case 'LOOT_REVEAL':
+        if (this.rand() < 0.45) say(pick(bots), pick(['MY_MONEY', 'FAMILY', 'BUSINESS', 'CAPISCE']), 1400 + this.rand() * 1500);
+        break;
+      case 'COURAGE':
+        for (const p of s.players) {
+          const bot = seatOf(p.id);
+          if (!bot) continue;
+          const onMe = s.players.filter(o => o.alive && o.target === p.id).length;
+          if (onMe && this.rand() < 0.3 + onMe * 0.1) say(bot, pick(['TRY_ME', 'NOT_TODAY', 'LIAR', 'TRUCE', 'FORGET_IT']), 300 + this.rand() * 1800);
+          else if (p.target && this.rand() < 0.18) say(bot, pick(['CAPISCE', 'LOADED', 'NOTHING_PERSONAL']), 300 + this.rand() * 1800);
+        }
+        break;
+      case 'SHOWDOWN': {
+        const ev = [...s.log].reverse().find(e => e.t === 'SHOWDOWN');
+        if (!ev || ev.t !== 'SHOWDOWN') break;
+        for (const r of ev.reveals) {
+          const bot = seatOf(r.playerId);
+          if (bot && r.card === 'BANG' && ev.wounds[r.target] && this.rand() < 0.55) say(bot, pick(['BADA_BING', 'NOTHING_PERSONAL', 'BUSINESS', 'CAPISCE']), 1700 + this.rand() * 900);
+        }
+        break;
+      }
+      case 'SPLIT':
+        if (this.rand() < 0.25) say(pick(bots), pick(['MY_MONEY', 'FAMILY']), 800 + this.rand() * 2000);
+        break;
+    }
+  }
 
   private scheduleBots() {
     const s = this.state!;

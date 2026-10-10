@@ -542,3 +542,27 @@ button.round:hover { transform: translateY(-6px); border-color: var(--smoke-2); 
     color: var(--lamp-dim); white-space: nowrap; pointer-events: none;
   }
 }
+
+/* ── cinematic touches ─────────────────────────────────────────────────── */
+.letterbox i {
+  position: absolute; left: 0; right: 0; height: 0; z-index: 5; background: #000; pointer-events: none;
+  transition: height 320ms cubic-bezier(.2,.8,.2,1);
+}
+.letterbox i:first-child { top: 0; }
+.letterbox i:last-child { bottom: 0; }
+.letterbox.is-on i { height: 9vh; }
+.hit-splat { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+.hit-splat svg { position: absolute; inset: 0; width: 100%; height: 100%; animation: splat-fade 2.6s ease forwards; filter: drop-shadow(0 0 6px rgba(60,0,0,.6)); }
+.hit-splat .drip { transform-box: fill-box; transform-origin: top; animation: drip 2.4s ease-in forwards; }
+@keyframes drip { from { transform: scaleY(0.2); } to { transform: scaleY(2.4); } }
+@keyframes splat-fade { 0% { opacity: 0.95; transform: scale(1.12); } 8% { transform: scale(1); } 70% { opacity: 0.85; } 100% { opacity: 0; } }
+.title-card {
+  position: absolute; inset: 0; z-index: 7; display: grid; place-content: center; justify-items: center; gap: 2px;
+  pointer-events: none; animation: title-in 2.2s ease forwards;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.55), transparent 60%);
+}
+.title-card b { font: 400 clamp(5rem, 20vw, 10rem)/0.9 var(--display); color: var(--lamp); text-shadow: 0 0 30px rgba(0,0,0,.9), 5px 5px 0 #7a0d0d; }
+.title-card small { font: 600 1.15rem var(--label); letter-spacing: 0.3em; color: var(--gold); }
+@keyframes title-in { 0% { opacity: 0; transform: scale(1.15); } 14% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+.game .stamp { color: #ffe066; text-shadow: 6px 6px 0 #7a0d0d, 0 0 40px rgba(0,0,0,.8); }
+@media (prefers-reduced-motion: reduce) { .letterbox i { transition: none; } }
