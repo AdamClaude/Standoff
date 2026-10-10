@@ -1,5 +1,5 @@
 // All sound is synthesised live with Web Audio: no files, nothing to license.
-// Buses: sfx (with a room reverb send), music (a small noir jazz combo), ambience (rain + vinyl crackle).
+// Buses: sfx (with a room reverb send) and music (a small noir jazz combo). No background noise beds.
 import { store } from './storage';
 
 let ctx: AudioContext | null = null;
@@ -63,7 +63,7 @@ export const sound = {
     if (on) music.start();
   },
   /** Call from a user gesture: browsers only allow audio after one. */
-  unlock() { if (ac()) { music.start(); ambience.start(); } },
+  unlock() { if (ac()) music.start(); },
 };
 
 // ── building blocks ─────────────────────────────────────────────────────────
@@ -254,6 +254,48 @@ export const sfx = {
     const n = noise(c, t, 0.02); const b = filt(c, 'bandpass', 4200, 10);
     n.connect(b); b.connect(env(c, 0.18, 0.001, 0.02, t));
   },
+  /** Getaway car: engine growl and tyre screech. */
+  car() {
+    const c = ac(); if (!c) return; const t = now();
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(48, t); o.frequency.linearRampToValueAtTime(95, t + 0.6); o.frequency.linearRampToValueAtTime(40, t + 1.3);
+    const lp = filt(c, 'lowpass', 380, 2); o.connect(lp); lp.connect(env(c, 0.35, 0.1, 1.3, t));
+    o.start(t); o.stop(t + 1.5);
+    const sq = c.createOscillator(); sq.type = 'triangle';
+    sq.frequency.setValueAtTime(1500, t + 0.75); sq.frequency.linearRampToValueAtTime(1150, t + 1.25);
+    const bp = filt(c, 'bandpass', 1300, 3); sq.connect(bp); bp.connect(env(c, 0.06, 0.05, 0.5, t + 0.75));
+    sq.start(t + 0.75); sq.stop(t + 1.35);
+  },
+  /** Hurried footsteps. */
+  steps(count = 8, gap = 0.16) {
+    const c = ac(); if (!c) return; const t = now();
+    for (let i = 0; i < count; i++) {
+      const tt = t + i * gap + Math.random() * 0.03;
+      const n = noise(c, tt, 0.05); const b = filt(c, 'bandpass', 380 + Math.random() * 200, 2);
+      n.connect(b); b.connect(env(c, 0.22, 0.002, 0.06, tt, 'sfx', 0.2));
+    }
+  },
+  /** Bank doors kicked in. */
+  doors() {
+    const c = ac(); if (!c) return; const t = now();
+    const n = noise(c, t, 0.35); const lp = filt(c, 'lowpass', 900);
+    n.connect(lp); lp.connect(env(c, 0.8, 0.003, 0.3, t, 'sfx', 0.7));
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(80, t); o.frequency.exponentialRampToValueAtTime(35, t + 0.3);
+    o.connect(env(c, 0.7, 0.003, 0.3, t)); o.start(t); o.stop(t + 0.35);
+    for (let i = 0; i < 5; i++) { const tt = t + 0.08 + i * 0.05; osc(c, 'sine', 3000 + Math.random() * 3000, tt, 0.15, env(c, 0.04, 0.001, 0.15, tt, 'sfx', 0.3)); }
+  },
+  /** Old electric alarm bell. */
+  alarm(seconds = 2) {
+    const c = ac(); if (!c) return; const t = now();
+    const o = c.createOscillator(); o.type = 'square'; o.frequency.value = 880;
+    const trem = c.createOscillator(); trem.type = 'square'; trem.frequency.value = 22;
+    const tg = c.createGain(); tg.gain.value = 0.5; trem.connect(tg);
+    const g = c.createGain(); g.gain.value = 0.5; tg.connect(g.gain);
+    const bp = filt(c, 'bandpass', 1800, 4);
+    o.connect(g); g.connect(bp); bp.connect(env(c, 0.07, 0.02, seconds, t, 'sfx', 0.4));
+    o.start(t); o.stop(t + seconds + 0.1); trem.start(t); trem.stop(t + seconds + 0.1);
+  },
   clink() {
     const c = ac(); if (!c) return; const t = now();
     for (const f of [3100, 4650]) osc(c, 'sine', f, t, 0.25, env(c, 0.04, 0.001, 0.25, t, 'sfx', 0.3));
@@ -262,27 +304,6 @@ export const sfx = {
     const c = ac(); if (!c) return; const t = now() + 0.4 + Math.random() * 0.8;
     const n = noise(c, t, 2.5); const lp = filt(c, 'lowpass', 300, 0.8);
     n.connect(lp); lp.connect(env(c, 0.35, 0.15, 2.2, t, 'amb', 0.4));
-  },
-};
-
-// ── Ambience: rain on the window and a dusty record ─────────────────────────
-
-const ambience = {
-  started: false,
-  start() {
-    const c = ac(); if (!c || this.started) return;
-    this.started = true;
-    const rain = c.createBufferSource(); rain.buffer = noiseBuf; rain.loop = true;
-    const hp = filt(c, 'highpass', 500); const lp = filt(c, 'lowpass', 2600);
-    const g = c.createGain(); g.gain.value = 0.07;
-    rain.connect(hp); hp.connect(lp); lp.connect(g); g.connect(ambBus); rain.start();
-    // vinyl crackle: sparse clicks
-    const crackle = c.createBuffer(1, c.sampleRate * 3, c.sampleRate);
-    const d = crackle.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() < 0.0009 ? (Math.random() * 2 - 1) * 0.9 : (Math.random() * 2 - 1) * 0.015;
-    const cr = c.createBufferSource(); cr.buffer = crackle; cr.loop = true;
-    const cg = c.createGain(); cg.gain.value = 0.18; const cb = filt(c, 'bandpass', 2500, 0.6);
-    cr.connect(cb); cb.connect(cg); cg.connect(musicBus); cr.start();
   },
 };
 

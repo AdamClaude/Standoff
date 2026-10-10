@@ -27,7 +27,7 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
 export type TimerKey = Exclude<Phase, 'GAME_OVER'> | 'PENDING';
 
 const NORMAL: Record<TimerKey, number> = {
-  LOOT_REVEAL: 5000,
+  LOOT_REVEAL: 10000,  // round-start cutscene (≤ 9 s, skippable) then a look at the loot
   LOAD: 12000,      // pick a bullet AND a target, secretly; '3… 2… 1… DRAW!'
   HOLD_UP: 4500,       // "3… 2… 1… AIM!"
   KID_AIM: 6000,

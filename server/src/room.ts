@@ -146,8 +146,9 @@ export class Room {
     const s = { ...this.settings };
     if (p.maxPlayers !== undefined) s.maxPlayers = Math.max(3, Math.min(8, Math.floor(p.maxPlayers)));
     if (p.timers && ['FAST', 'NORMAL', 'CHILL'].includes(p.timers)) s.timers = p.timers;
-    if (typeof p.powers === 'boolean') s.powers = p.powers;
-    if (typeof p.openVaults === 'boolean') s.openVaults = p.openVaults;
+    // Powers and open vaults are not offered any more: always off.
+    s.powers = false;
+    s.openVaults = false;
     if (p.noStandRule && ['ROLLOVER', 'DISCARD'].includes(p.noStandRule)) s.noStandRule = p.noStandRule;
     if (p.botLevel && ['EASY', 'NORMAL', 'SHARK'].includes(p.botLevel)) s.botLevel = p.botLevel;
     if (typeof p.botTakeover === 'boolean') s.botTakeover = p.botTakeover;

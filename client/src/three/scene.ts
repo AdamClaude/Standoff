@@ -10,6 +10,7 @@ import type { ClientView, GameEvent, LootCard, PublicPlayer } from '@standoff/en
 import { NEW_BOSS_TOKEN } from '@standoff/engine';
 import { characterById } from '@standoff/shared';
 import { music, sfx } from '../audio';
+import { BANKS, Cutscene } from './cutscene';
 import {
   ROOM, ROOM_H, SEAT_R, TABLE_R, TABLE_Y, buildCard, buildCharacter, buildCrown, buildLamp, buildLoot, buildRevolver, buildRoom,
   buildTable, setCardFace, MAT, type CharacterRig, type RoomRig,
@@ -146,6 +147,10 @@ export class BarScene {
   private nextLightning = 6;
   private bloodGeo = new THREE.SphereGeometry(0.02, 6, 5);
   private prevPhase = '';
+  private cut: Cutscene | null = null;
+  cutLog: { round: number; ms: number }[] = [];
+  cutFrames = 0;
+  private warmId: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -232,6 +237,13 @@ export class BarScene {
     this.composer.addPass(new OutputPass());
 
     const el = this.renderer.domElement;
+    window.addEventListener('standoff:skip-cutscene', this.onSkip);
+    // Compile the street scene's shaders in the background so the first heist doesn't stutter.
+    this.warmId = setTimeout(() => {
+      if (this.cut) return;
+      const warm = new Cutscene(1, ['rico', 'sal', 'mags', 'smoky'], 7);
+      this.renderer.compileAsync(warm.scene, warm.camera).catch(() => {}).finally(() => warm.dispose());
+    }, 400);
     el.addEventListener('pointerdown', this.onDown);
     el.addEventListener('pointermove', this.onMove);
     window.addEventListener('pointerup', this.onUp);
@@ -257,6 +269,9 @@ export class BarScene {
     cancelAnimationFrame(this.raf);
     this.ro.disconnect();
     window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('standoff:skip-cutscene', this.onSkip);
+    clearTimeout(this.warmId);
+    this.skipCutscene();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -451,6 +466,32 @@ export class BarScene {
     this.refresh();
   }
 
+  /** Round-start cutscene: the crew hits the bank. Tap or call skip to end it early. */
+  playCutscene(round: number, avatars: string[], ms: number) {
+    this.cutLog.push({ round, ms: Math.round(ms) });   // test hook
+    if (this.cut || ms < 2500) return;
+    const cut = new Cutscene(round, avatars, Math.min(9, ms / 1000));
+    this.cut = cut;
+    cut.setAspect(this.host.clientWidth / Math.max(1, this.host.clientHeight));
+    // Compile off the main thread where the browser allows it; hold a black frame meanwhile.
+    const t0 = performance.now();
+    this.renderer.compileAsync(cut.scene, cut.camera).catch(() => {}).finally(() => {
+      cut.duration = Math.max(2, cut.duration - (performance.now() - t0) / 1000);
+      cut.ready = true;
+    });
+    music.setMood('normal');
+    window.dispatchEvent(new CustomEvent('standoff:cutscene', { detail: { active: true, round, bank: BANKS[(round - 1) % BANKS.length] } }));
+  }
+
+  private onSkip = () => this.skipCutscene();
+
+  skipCutscene() {
+    if (!this.cut) return;
+    this.cut.dispose();
+    this.cut = null;
+    window.dispatchEvent(new CustomEvent('standoff:cutscene', { detail: { active: false } }));
+  }
+
   /** A mobster says something: speech bubble + moving jaw. */
   say(id: string, text: string) {
     const s = this.seats.get(id);
@@ -467,6 +508,7 @@ export class BarScene {
   }
 
   private onPhase(v: ClientView, prev: string) {
+    if (v.phase !== 'LOOT_REVEAL') this.skipCutscene(); // never eat into the playing time
     if (v.phase === 'COURAGE') music.setMood('tense');
     else if (v.phase === 'SHOWDOWN') music.setMood('silent');
     else if (prev === 'SHOWDOWN' || v.phase === 'LOOT_REVEAL' || v.phase === 'LOAD') setTimeout(() => music.setMood('normal'), v.phase === 'SPLIT' ? 900 : 0);
@@ -1018,6 +1060,12 @@ export class BarScene {
     const v = this.view, ui = this.ui;
     const reduced = ui?.reducedMotion ?? false;
 
+    if (this.cut) {
+      this.cut.setAspect(this.host.clientWidth / Math.max(1, this.host.clientHeight));
+      if (!this.cut.ready) { this.renderer.setRenderTarget(null); this.renderer.clear(); return; }
+      if (this.cut.update(Math.min(fxDt, 0.1))) { this.cutFrames++; this.renderer.render(this.cut.scene, this.cut.camera); return; }
+      this.skipCutscene();
+    }
     this.animateRoom(dt, time);
 
     if (v) {
@@ -1114,7 +1162,6 @@ export class BarScene {
       const seq = [0, 60, 120, 200];
       seq.forEach((d, i) => setTimeout(() => { r.lightning.intensity = i % 2 ? 0 : 60; r.windowSpot.intensity = i % 2 ? 18 : 60; }, d));
       setTimeout(() => { r.lightning.intensity = 0; r.windowSpot.intensity = 18; }, 320);
-      sfx.thunder();
     }
     this.dust.rotation.y += dt * 0.02;
     for (const h of this.haze) {

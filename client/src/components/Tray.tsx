@@ -45,7 +45,6 @@ export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
             <span className={v.me.loaded ? 'is-set' : ''}>{t('yourBullet')}: <b>{v.me.loaded ? v.me.loaded.kind : '—'}</b></span>
             <span className={v.me.target || kid ? 'is-set' : ''}>{t('yourTarget')}: <b>{kid ? t('kidLater') : v.me.target ? nameOf(v, v.me.target) : '—'}</b></span>
           </div>
-          <p className="tray-msg">{t('drawPrompt')}</p>
           <div className="kind-pick">
             {(['BANG', 'CLICK'] as const).map(k => {
               const left = all.filter(c => c.kind === k);

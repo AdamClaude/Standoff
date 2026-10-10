@@ -28,6 +28,7 @@ export function Game() {
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', reduced); }, [reduced]);
 
   useGameSounds(v);
+  const cut = useCutscene();
   const remaining = useRemaining(msg.phaseEndsAt, v.phaseSeq);
   const feed = useFeed(v);
 
@@ -70,7 +71,7 @@ export function Game() {
   const threat = m && v.phase === 'COURAGE' ? gunsOn(v, m.id).length : 0;
 
   return (
-    <div className={`game phase-${v.phase.toLowerCase()}${threat ? ` threat-${Math.min(threat, 3)}` : ''}`}>
+    <div className={`game phase-${v.phase.toLowerCase()}${threat ? ` threat-${Math.min(threat, 3)}` : ''}${cut ? ' in-cutscene' : ''}`}>
       <header className="topbar">
         <div className="topbar-left">
           <span className="round-tag">{t('round', { n: v.round, total: v.rounds })}</span>
@@ -90,6 +91,7 @@ export function Game() {
       <div className="stage">
         <Scene3D
           v={v}
+          phaseEndsAt={msg.phaseEndsAt}
           ui={{
             pickPlayers: seatAction?.ids ?? [],
             onPickPlayer: seatAction?.onPick,
@@ -115,7 +117,7 @@ export function Game() {
       <Crew v={v} />
       <div className={`letterbox${v.phase === 'SHOWDOWN' ? ' is-on' : ''}`} aria-hidden="true"><i /><i /></div>
       <HitSplat />
-      <TitleCard v={v} />
+      {cut ? <CutsceneOverlay cut={cut} rounds={v.rounds} /> : <StepBanner v={v} />}
       {v.phase === 'LOOT_REVEAL' && <p className="rotate-hint">{t('rotateHint')}</p>}
       <Tray v={v} tray={tray} />
 
@@ -182,6 +184,72 @@ function HitSplat() {
     </div>
   );
 }
+
+/** Tracks the 3D cutscene so the HUD can step aside. */
+function useCutscene() {
+  const [cut, setCut] = useState<{ round: number; bank: string } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent).detail as { active: boolean; round: number; bank: string };
+      setCut(d.active ? { round: d.round, bank: d.bank } : null);
+    };
+    window.addEventListener('standoff:cutscene', on);
+    return () => window.removeEventListener('standoff:cutscene', on);
+  }, []);
+  return cut;
+}
+
+function CutsceneOverlay({ cut, rounds }: { cut: { round: number; bank: string }; rounds: number }) {
+  return (
+    <button className="cutscene-overlay" onClick={() => window.dispatchEvent(new Event('standoff:skip-cutscene'))}>
+      <span className="cut-bars" aria-hidden="true"><i /><i /></span>
+      <span className="cut-title">
+        <small>{t('heistWord')} {cut.round} {t('ofTotal', { total: rounds })}</small>
+        <b>{cut.bank}</b>
+      </span>
+      <span className="cut-skip">{t('tapToSkip')}</span>
+    </button>
+  );
+}
+
+/** One short, direct instruction for the step you're in. */
+function StepBanner({ v }: { v: ClientView }) {
+  const m = me(v);
+  const step = STEP_OF[v.phase];
+  let text: Key = 'st_wait';
+  let you = false;
+  if (!m) text = 'st_watch';
+  else if (!m.alive) text = 'st_out';
+  else if (v.pending && v.pending.playerId === m.id) { text = 'st_discard'; you = true; }
+  else switch (v.phase) {
+    case 'LOOT_REVEAL': text = 'st_loot'; break;
+    case 'LOAD': {
+      const kid = m.power === 'KID' && v.settings.powers;
+      const b = !!v.me?.loaded, tg = !!v.me?.target || kid;
+      text = !b && !tg ? 'st_load_both' : !b ? 'st_load_bullet' : !tg ? 'st_load_target' : 'st_load_done';
+      you = !(b && tg);
+      break;
+    }
+    case 'KID_AIM': text = m.power === 'KID' ? 'st_kid' : 'st_wait_kid'; you = m.power === 'KID'; break;
+    case 'CUNNING_SWAP': text = m.power === 'CUNNING' ? 'st_cunning' : 'st_wait'; you = m.power === 'CUNNING'; break;
+    case 'BOSS_PRIVILEGE': text = v.bossId === m.id ? 'st_boss' : 'st_wait_boss'; you = v.bossId === m.id; break;
+    case 'REDIRECT': text = v.redirect?.player === m.id ? 'st_redirect' : 'st_wait'; you = v.redirect?.player === m.id; break;
+    case 'COURAGE': text = v.me?.stance ? 'st_courage_done' : 'st_courage'; you = !v.me?.stance; break;
+    case 'SHOWDOWN': text = 'st_showdown'; break;
+    case 'SPLIT': text = !m.inSplit ? 'st_split_out' : v.currentPicker === m.id ? 'st_split_you' : 'st_split_wait'; you = v.currentPicker === m.id && m.inSplit; break;
+    case 'ROUND_END': text = 'st_round_end'; break;
+  }
+  return (
+    <div className={`step-banner${you ? ' is-you' : ''}`} role="status" aria-live="polite">
+      {step && <small>{t('stepOf', { n: step, total: 6 })}</small>}
+      <b>{t(text)}</b>
+    </div>
+  );
+}
+
+const STEP_OF: Partial<Record<string, number>> = {
+  LOOT_REVEAL: 1, LOAD: 2, KID_AIM: 2, CUNNING_SWAP: 2, BOSS_PRIVILEGE: 3, REDIRECT: 3, COURAGE: 4, SHOWDOWN: 5, SPLIT: 6,
+};
 
 /** Film-noir title card at the start of each heist. */
 function TitleCard({ v }: { v: ClientView }) {
