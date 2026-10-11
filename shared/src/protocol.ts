@@ -36,8 +36,8 @@ const NORMAL: Record<TimerKey, number> = {
   HOLD_UP: 4500,       // "3… 2… 1… AIM!"
   KID_AIM: 6000,
   CUNNING_SWAP: 6000,
-  BOSS_PRIVILEGE: 8000,
-  REDIRECT: 6000,
+  BOSS_PRIVILEGE: 10000,
+  REDIRECT: 9000,     // the ordered gangster gets real time to choose a new target
   COURAGE: 4000,       // "3… 2… 1… DECIDE!"
   SHOWDOWN: 5000,
   SPLIT: 10000,

@@ -116,6 +116,9 @@ export class BarScene {
   private bagCount = 0;
   private bagPuff = 0;
   private viewSmokeAt = 0;
+  private flashLights: THREE.PointLight[] = [];
+  private flashIdx = 0;
+  private aimGoal = new THREE.Object3D();
   private cardsRoot = new THREE.Group();
   private fx: Fx[] = [];
   private parts: Particle[] = [];
@@ -149,7 +152,7 @@ export class BarScene {
   private disposed = false;
   private flashTex: THREE.Texture;
   private insets = { top: 0, bottom: 0 };
-  private perf = { frames: 0, time: 0, low: false };
+  private perf = { frames: 0, time: 0, low: false, step: 0 };
   private viewH = 1;
   private nextLightning = 6;
   private bloodGeo = new THREE.SphereGeometry(0.02, 6, 5);
@@ -161,9 +164,9 @@ export class BarScene {
 
   constructor(private host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -184,6 +187,11 @@ export class BarScene {
     const lamp = buildLamp(this.scene);
     this.spot = lamp.spot;
     this.lamp = lamp.lamp;
+    for (let i = 0; i < 2; i++) {
+      const l = new THREE.PointLight('#ffa040', 0, 5, 2); // always present, intensity 0 until a gun fires
+      this.scene.add(l);
+      this.flashLights.push(l);
+    }
     const faces = new THREE.PointLight('#ffc888', 3.2, 4.2, 1.4);
     faces.position.set(0, 1.55, 0);
     this.scene.add(faces);
@@ -255,6 +263,19 @@ export class BarScene {
     // Compile the street scene's shaders in the background so the first heist doesn't stutter.
     this.warmId = setTimeout(() => {
       if (this.cut) return;
+      // Also pre-build every prop that shows up later (loot, bag, bullets, cigar, bursts) so its first
+      // appearance mid-game doesn't hitch while the GPU compiles it.
+      const props = new THREE.Group();
+      props.position.set(0, -50, 0);
+      const kinds: LootCard[] = [
+        { id: 'w0', kind: 'CASH', value: 20000 }, { id: 'w1', kind: 'DIAMOND', value: 5000 }, { id: 'w2', kind: 'PAINTING', value: 0 },
+        { id: 'w3', kind: 'CLIP', value: 0 }, { id: 'w4', kind: 'FIRST_AID', value: 0 },
+      ];
+      kinds.forEach((c, i) => props.add(buildLoot(c, i)));
+      props.add(buildHeistBag(), buildBullet('BANG'), buildBullet('CLICK'), buildBullet('BACK'), buildBossCigar());
+      props.add(new THREE.Sprite(new THREE.SpriteMaterial({ map: burstTexture('BANG!', '#e8b020', '#7a0d0d'), depthTest: false, transparent: true })));
+      this.scene.add(props);
+      this.renderer.compileAsync(this.scene, this.camera).catch(() => {}).finally(() => this.scene.remove(props));
       const warm = new Cutscene(1, ['rico', 'sal', 'mags', 'smoky'], 7);
       this.renderer.compileAsync(warm.scene, warm.camera).catch(() => {}).finally(() => warm.dispose());
     }, 400);
@@ -372,7 +393,7 @@ export class BarScene {
       const pk = this.portrait;
       this.viewCigar.position.set(-0.3 - pk * 0.05, -0.36 - pk * 0.32 + Math.sin(nowMs / 900) * 0.008, -0.62 - pk * 0.75);
       this.viewCigar.scale.setScalar(1.4 - pk * 0.2);
-      (this.viewCigar.userData.glow as THREE.PointLight).intensity = 0.5 + Math.sin(nowMs / 400) * 0.2;
+      (this.viewCigar.userData.glow as THREE.Sprite).material.opacity = 0.6 + Math.sin(nowMs / 400) * 0.25;
       if (nowMs > this.viewSmokeAt) {
         this.viewSmokeAt = nowMs + 380 + Math.random() * 300;
         const e = (this.viewCigar.userData.ember as THREE.Object3D).getWorldPosition(new THREE.Vector3());
@@ -382,7 +403,7 @@ export class BarScene {
     this.viewGun.visible = fp && (this.myArmed || this.viewGun.position.y > -0.65);
     if (this.viewGun.visible) {
       if (this.myArmed && myTarget && myDuck < 0.5) {
-        const goal = new THREE.Object3D();
+        const goal = this.aimGoal;
         goal.position.copy(this.viewGun.position);
         this.camera.add(goal);
         goal.lookAt(this.headPos(myTarget, tmpV));
@@ -872,10 +893,11 @@ export class BarScene {
     const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.flashTex, color: '#ffcf6a', blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     flash.position.copy(muzzle);
     flash.scale.setScalar(0.7);
-    const light = new THREE.PointLight('#ffa040', 30, 5, 2);
+    // Reuse a fixed pool of flash lights: adding/removing lights recompiles every shader (a big stutter).
+    const light = this.flashLights[this.flashIdx++ % this.flashLights.length];
     light.position.copy(muzzle);
-    this.scene.add(flash, light);
-    this.fx.push({ obj: flash, t: 0, life: 0.18, update: k => { flash.material.opacity = 1 - k; flash.scale.setScalar(0.7 + k * 0.5); light.intensity = 30 * (1 - k); if (k >= 1) this.scene.remove(light); } });
+    this.scene.add(flash);
+    this.fx.push({ obj: flash, t: 0, life: 0.18, update: k => { flash.material.opacity = 1 - k; flash.scale.setScalar(0.7 + k * 0.5); light.intensity = 30 * (1 - k); } });
     for (let i = 0; i < 5; i++) this.spawnSmoke(muzzle, new THREE.Vector3((Math.random() - 0.5) * 0.3, 0.25 + Math.random() * 0.2, (Math.random() - 0.5) * 0.3), 0.18, 1.6, '#d8d0c4');
     const casing = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.03, 6), MAT.brass);
     casing.position.copy(muzzle).add(new THREE.Vector3(0, 0.05, 0));
@@ -1127,13 +1149,18 @@ export class BarScene {
     if (this.perf.low) return;
     this.perf.frames++;
     this.perf.time += dt;
-    if (this.perf.time < 4) return;
+    if (this.perf.time < 3) return;
     const fps = this.perf.frames / this.perf.time;
     this.perf.frames = 0; this.perf.time = 0;
-    if (fps < 28) {
-      this.perf.low = true;
+    // Step down gradually: sharpness first, then bloom and shadows.
+    if (fps < 50 && this.perf.step === 0 && this.renderer.getPixelRatio() > 1) {
+      this.perf.step = 1;
       this.renderer.setPixelRatio(1);
-      this.room.windowSpot.castShadow = false;
+      this.resize();
+    } else if (fps < 34) {
+      this.perf.low = true;
+      this.renderer.setPixelRatio(Math.min(1, this.renderer.getPixelRatio()));
+      this.renderer.shadowMap.autoUpdate = false; // keep the last shadow frame, stop re-rendering it
       this.resize();
     }
   }
@@ -1440,8 +1467,8 @@ export class BarScene {
     ringMat.opacity = marked ? 0.9 : tappable ? (hovered ? 0.95 : 0.45 + Math.sin(time * 5) * 0.2) : 0;
     if (marked) ringMat.color.set('#ff2a1a');
     if (s.crown) {
-      const glow = s.crown.userData.glow as THREE.PointLight;
-      glow.intensity = 0.45 + Math.sin(time * 2.3) * 0.2 + Math.random() * 0.08; // ember breathing
+      const glow = s.crown.userData.glow as THREE.Sprite;
+      glow.material.opacity = 0.55 + Math.sin(time * 2.3) * 0.25 + Math.random() * 0.1; // ember breathing
     }
     const sc = 1 + this.portrait * 0.3;
     s.tag.scale.set(0.62 * sc, 0.242 * sc, 1);

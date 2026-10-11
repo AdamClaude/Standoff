@@ -84,6 +84,13 @@ export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
         <div className="tray">
           <p className="tray-msg">{t('bossPrompt')}</p>
           <div className="boss-btns">
+            {v.redirectCandidates.filter(id => id !== m.id).map(id => (
+              <button key={id} className="btn btn-small" onClick={() => api.act({ type: 'BOSS_REDIRECT', target: id })}>
+                {t('bossOrderShort', { name: nameOf(v, id) })}
+              </button>
+            ))}
+          </div>
+          <div className="boss-btns">
             {v.redirectCandidates.includes(m.id) && (
               <button className="btn" onClick={() => api.act({ type: 'BOSS_REDIRECT', target: m.id })}>{t('bossSelf')}</button>
             )}
@@ -93,6 +100,19 @@ export function Tray({ v, tray }: { v: ClientView; tray: TrayState }) {
       );
 
     case 'REDIRECT':
+      if (v.redirect?.player === m.id) {
+        // The Boss told you to look elsewhere: pick your new target (tap a seat or a name).
+        return (
+          <div className="tray">
+            <p className="tray-msg">{v.bossId === m.id ? t('st_redirect') : t('redirectPrompt')}</p>
+            <div className="boss-btns">
+              {v.retargetOptions.map(id => (
+                <button key={id} className="btn btn-small" onClick={() => { sfx.mark(); api.act({ type: 'RETARGET', target: id }); }}>{nameOf(v, id)}</button>
+              ))}
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="tray">
           <p className="tray-msg">{v.redirect?.player === m.id

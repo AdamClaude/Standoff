@@ -832,8 +832,10 @@ export function buildBossCigar(scale = 1): THREE.Group {
   ash.rotation.x = Math.PI / 2;
   const ember = new THREE.Mesh(new THREE.CircleGeometry(0.024, 14), new THREE.MeshBasicMaterial({ color: '#ff5a1a', toneMapped: false }));
   ember.position.z = 0.1435;
-  const glow = new THREE.PointLight('#ff6a20', 0.6, 0.6, 2);
-  glow.position.z = 0.17;
+  // A soft additive halo instead of a real light (lights appearing/disappearing force shader recompiles).
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#ff6a20', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6, toneMapped: false }));
+  glow.position.z = 0.15;
+  glow.scale.setScalar(0.12);
   g.add(body, capEnd, band, bandRed, ash, ember, glow);
   g.scale.setScalar(scale);
   g.userData.ember = ember;
@@ -897,4 +899,17 @@ export function buildHeistBag(): THREE.Group {
   g.userData.neck = neck;
   g.userData.body = body;
   return g;
+}
+
+let glowTex: THREE.Texture | null = null;
+function glowTexture() {
+  if (glowTex) return glowTex;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const x = cv.getContext('2d')!;
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  glowTex = new THREE.CanvasTexture(cv);
+  return glowTex;
 }
