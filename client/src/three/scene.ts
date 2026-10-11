@@ -104,7 +104,6 @@ export class BarScene {
   private lamp: THREE.Group;
   private lampKick = 0;
   private room: RoomRig;
-  private tableSmoke: THREE.Object3D;
   private seats = new Map<string, Seat>();
   private rosterKey = '';
   private loot = new Map<string, LootObj>();
@@ -182,7 +181,6 @@ export class BarScene {
     this.scene.add(new THREE.HemisphereLight('#4a3326', '#120806', 0.5));
     this.room = buildRoom(this.scene);
     const table = buildTable();
-    this.tableSmoke = table.userData.smoke;
     this.scene.add(table);
     const lamp = buildLamp(this.scene);
     this.spot = lamp.spot;
@@ -1319,10 +1317,6 @@ export class BarScene {
       h.position.add(tmpV.copy(h.userData.drift).multiplyScalar(dt));
       if (Math.hypot(h.position.x, h.position.z) > 3.5) h.userData.drift.multiplyScalar(-1);
       h.material.rotation += dt * 0.02;
-    }
-    if (Math.random() < dt * 3) {
-      this.tableSmoke.getWorldPosition(tmpV);
-      this.spawnSmoke(tmpV, new THREE.Vector3((Math.random() - 0.5) * 0.04, 0.18, (Math.random() - 0.5) * 0.04), 0.05, 3.5);
     }
   }
 

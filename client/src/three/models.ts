@@ -268,17 +268,7 @@ export function buildTable() {
   const leg = mesh(new THREE.CylinderGeometry(0.12, 0.16, TABLE_Y - 0.06, 16), std('#2a170c', { roughness: 0.5 }), 0, (TABLE_Y - 0.06) / 2, 0);
   const foot = mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.06, 32), std('#1d1008', { roughness: 0.4, metalness: 0.2 }), 0, 0.03, 0);
   g.add(top, cloth, skirt, leg, foot);
-  // Ashtray with a smouldering cigar in the middle of the action.
-  const ash = new THREE.Group();
-  ash.add(mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.03, 16), std('#3a3540', { metalness: 0.7, roughness: 0.3 })));
-  const cig = mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.13, 8), std('#5a3018'), 0.03, 0.03, 0);
-  cig.rotation.z = Math.PI / 2 - 0.15;
-  const ember = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), new THREE.MeshBasicMaterial({ color: '#ff5a1a', toneMapped: false }));
-  ember.position.set(0.095, 0.04, 0);
-  ash.add(cig, ember);
-  ash.position.set(0.18, TABLE_Y + 0.025, -0.16);
-  g.add(ash);
-  g.userData.smoke = ember;
+  // (No ashtray/cigar on the table: the only cigar in the game is the Boss's.)
   return g;
 }
 
