@@ -46,7 +46,7 @@ npm run sim -- --games 200 --players 5 --powers --levels SHARK,EASY,NORMAL,NORMA
 
 After eight heists, survivors count their stash. Most diamonds (by count) earns $60k; paintings score as a set (1→$4k … 10→$500k). Richest survivor wins; ties go to whoever took more wounds.
 
-**House rules**: the Boss cigar passes clockwise every heist (no Boss token in the loot); one wound per heist at most; the Boss may switch his own aim; if nobody makes the split, the loot is lost; if everyone left dies in the same showdown, nobody wins.
+**House rules**: the Boss cigar is in the loot — grab it in the split to be Boss next heist; one wound per heist at most; the Boss may switch his own aim; if nobody makes the split, the loot is lost; if everyone left dies in the same showdown, nobody wins.
 
 ## Layout
 

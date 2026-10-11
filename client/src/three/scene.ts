@@ -829,10 +829,11 @@ export class BarScene {
     const jolt = pk >= 0 && pk < 1 ? Math.sin(pk * Math.PI) : 0;
     neck.scale.set(1 + jolt * 0.35, 1 + jolt * 0.2, 1 + jolt * 0.35);
     // The bag deflates as it empties, and vanishes once the last piece is out.
-    const done = this.bagCount > 0 ? 900 + this.bagCount * this.bagGap() + 500 : Infinity;
+    // Gone just as the last piece (the Boss cigar) takes off, so it lands in the clear middle of the table.
+    const done = this.bagCount > 0 ? 900 + (this.bagCount - 1) * this.bagGap() + 60 : Infinity;
     const empty = THREE.MathUtils.clamp((t - 900) / Math.max(1, done - 900), 0, 1);
     body.scale.set(1 + jolt * 0.06, (0.92 - empty * 0.45) * (1 - jolt * 0.05), 0.85);
-    const gone = THREE.MathUtils.clamp((t - done) / 400, 0, 1);
+    const gone = THREE.MathUtils.clamp((t - done) / 300, 0, 1);
     b.scale.setScalar(1.25 * (1 - gone));
     if (gone >= 1) { this.scene.remove(b); this.bag = null; }
   }

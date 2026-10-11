@@ -239,7 +239,7 @@ describe('split', () => {
     playRound(s, {}, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p0' });
     finishSplit(s);
     const seq = pickSeq(s);
-    expect(seq).toHaveLength(8); // 8 loot, no Boss token
+    expect(seq).toHaveLength(9); // 8 loot + the Boss cigar
     expect(seq.slice(0, 5)).toEqual(['p2', 'p3', 'p0', 'p1', 'p2']);
   });
 
@@ -250,11 +250,12 @@ describe('split', () => {
     expect(pickSeq(s).slice(0, 3)).toEqual(['p3', 'p0', 'p3']);
   });
 
-  it('a lone survivor in the split takes all 8 items', () => {
+  it('a lone survivor in the split takes all 9 items', () => {
     const s = newGame(4, {}, 'p0');
     playRound(s, {}, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p0' }, { p0: 'DUCK', p1: 'DUCK', p2: 'DUCK' });
     finishSplit(s);
-    expect(pickSeq(s)).toEqual(Array(8).fill('p3'));
+    expect(pickSeq(s)).toEqual(Array(9).fill('p3'));
+    expect(s.nextBossId).toBe('p3');
   });
 
   it('rejects picks out of turn', () => {
@@ -264,24 +265,28 @@ describe('split', () => {
     expect(err(() => apply(s, { type: 'PICK', playerId: 'p1', itemId: s.table[0].id }))).toBe('NOT_YOUR_TURN');
   });
 
-  it('no Boss token in the loot; the Boss cigar passes clockwise each heist', () => {
+  it('Boss cigar: taker is Boss next round, order unchanged now', () => {
     const s = newGame(4, {}, 'p0');
     playRound(s, {}, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p0' });
     tick(s);
-    expect(err(() => apply(s, { type: 'PICK', playerId: 'p0', itemId: NEW_BOSS_TOKEN }))).toBe('NO_SUCH_ITEM');
+    act(s, { type: 'PICK', playerId: 'p0', itemId: s.table[0].id });
+    act(s, { type: 'PICK', playerId: 'p1', itemId: NEW_BOSS_TOKEN });
+    expect(s.bossId).toBe('p0');
+    act(s, { type: 'PICK', playerId: 'p2', itemId: s.table[0].id });
+    expect(err(() => apply(s, { type: 'PICK', playerId: 'p3', itemId: NEW_BOSS_TOKEN }))).toBe('NO_SUCH_ITEM');
     finishSplit(s);
     tick(s);
     expect(s.bossId).toBe('p1');
     expect(s.round).toBe(2);
   });
 
-  it('ROLLOVER (engine option, not offered in rooms) carries the loot over; the cigar still moves on', () => {
+  it('unclaimed cigar → the Boss keeps it; ROLLOVER (engine option) carries the loot over', () => {
     const s = newGame(4, { noStandRule: 'ROLLOVER' }, 'p0');
     playRound(s, {}, { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p0' }, { p0: 'DUCK', p1: 'DUCK', p2: 'DUCK', p3: 'DUCK' });
     tick(s); // showdown → split → (nobody) round end
     expect(s.phase).toBe('ROUND_END');
     tick(s);
-    expect(s.bossId).toBe('p1');
+    expect(s.bossId).toBe('p0');
     expect(s.table).toHaveLength(16);
   });
 

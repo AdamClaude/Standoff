@@ -109,8 +109,7 @@ function startRound(s: GameState) {
   s.round += 1;
   const pile = s.lootPiles.shift() ?? [];
   s.table = [...s.table, ...pile]; // s.table holds any rolled-over loot
-  // House rule: no Boss token in the loot — the Boss cigar passes clockwise every heist instead.
-  s.tokenAvailable = false;
+  s.tokenAvailable = true; // the Boss cigar is part of the loot: whoever grabs it is Boss next heist
   s.nextBossId = null;
   s.redirect = null;
   s.pending = null;
@@ -715,14 +714,13 @@ function toRoundEnd(s: GameState) {
 function endRound(s: GameState) {
   // Leftover loot (nobody standing, or everyone walked away greedy)
   if (s.table.length > 0 && (s.settings.noStandRule === 'DISCARD' || s.lootPiles.length === 0)) s.table = [];
+  if (s.nextBossId && getPlayer(s, s.nextBossId).alive && s.nextBossId !== s.bossId) {
+    s.bossId = s.nextBossId;
+    s.log.push({ t: 'BOSS_CHANGE', round: s.round, bossId: s.bossId, reason: 'TOKEN' });
+  }
   if (s.round >= s.settings.rounds) {
     finishGame(s, null, 'ROUNDS');
     return;
-  }
-  const next = clockwiseFrom(s, s.bossId).find(x => x.alive && x.id !== s.bossId);
-  if (next) {
-    s.bossId = next.id;
-    s.log.push({ t: 'BOSS_CHANGE', round: s.round, bossId: next.id, reason: 'ROTATION' });
   }
   startRound(s);
 }
