@@ -340,7 +340,7 @@ export class BarScene {
     const nowMs = performance.now();
 
     // Look at the table; once your gun is out, at the rival you drew on; in a kill, at the victim.
-    const look = new THREE.Vector3(0, 0.92, 0);
+    const look = new THREE.Vector3(0, 0.98, -0.7);
     const myTarget = this.myArmed && v?.me?.target ? v.me.target : null;
     if (myTarget && this.seats.has(myTarget)) look.lerp(this.headPos(myTarget, tmpV2), 0.55);
     let zoom = 0;
@@ -349,7 +349,7 @@ export class BarScene {
       zoom = 12;
     }
     const sway = this.ui?.reducedMotion ? 0 : 1;
-    const fpPos = new THREE.Vector3(Math.sin(time * 0.6) * 0.008 * sway, 1.36 - myDuck * 0.62 + Math.sin(time * 1.3) * 0.005 * sway, SEAT_R + 0.1);
+    const fpPos = new THREE.Vector3(Math.sin(time * 0.6) * 0.008 * sway, 1.7 - myDuck * 0.75 + Math.sin(time * 1.3) * 0.005 * sway, SEAT_R + 0.25); // sat back a little: the whole table in view
     const fpLook = look.clone(); fpLook.y -= myDuck * 0.2;
     const hiPos = new THREE.Vector3(0, 3.0, SEAT_R + 1.25);
     const hiLook = new THREE.Vector3(0, 0.62, -0.1);
@@ -376,7 +376,7 @@ export class BarScene {
     const h = Math.max(1, this.host.clientHeight);
     const w = Math.max(1, this.host.clientWidth);
     const portraitFov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(31)) * h / w));
-    const baseFov = THREE.MathUtils.lerp(64, Math.min(105, portraitFov), p) - zoom * (1 - p * 0.5);
+    const baseFov = THREE.MathUtils.lerp(74, Math.min(105, portraitFov), p) - zoom * (1 - p * 0.5);
     const fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(baseFov) / 2) * (this.viewH / h)));
     if (Math.abs(this.camera.fov - fov) > 0.05) { this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 8); this.camera.updateProjectionMatrix(); }
 
@@ -707,12 +707,12 @@ export class BarScene {
         m.position.set(0, TABLE_Y + 0.004, 0.6);
       }
       if (v.me.loaded?.id === c.id) {
-        m.userData.home = new THREE.Vector3(0.16, TABLE_Y + 0.004, 0.78);
+        m.userData.home = new THREE.Vector3(0.2, TABLE_Y + 0.004, 0.98);
         m.userData.rot = new THREE.Euler(0, 0, 0);
       } else {
         const i = hand.findIndex(x => x.id === c.id);
         const f = i - (hand.length - 1) / 2;
-        m.userData.home = new THREE.Vector3(f * 0.06, TABLE_Y + 0.004, 0.64 - Math.abs(f) * 0.008);
+        m.userData.home = new THREE.Vector3(f * 0.06, TABLE_Y + 0.004, 0.84 - Math.abs(f) * 0.008);
         m.userData.rot = new THREE.Euler(0, 0, 0);
       }
     }

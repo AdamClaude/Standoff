@@ -81,14 +81,15 @@ describe('load & hold-up', () => {
     expect(err(() => apply(s, { type: 'AIM', playerId: 'p0', target: 'p1' }))).toBe('WRONG_PHASE');
   });
 
-  it('locks as soon as everyone has a bullet and a target', () => {
+  it('keeps the full countdown even once everyone has chosen (players may change their minds)', () => {
     const s = newGame();
     loadAll(s);
+    for (const [a, b] of [['p0', 'p1'], ['p1', 'p2'], ['p2', 'p3'], ['p3', 'p0']]) apply(s, { type: 'AIM', playerId: a, target: b });
     expect(s.phase).toBe('LOAD');
-    for (const [a, b] of [['p0', 'p1'], ['p1', 'p2'], ['p2', 'p3']]) apply(s, { type: 'AIM', playerId: a, target: b });
-    expect(s.phase).toBe('LOAD');
-    apply(s, { type: 'AIM', playerId: 'p3', target: 'p0' });
+    apply(s, { type: 'AIM', playerId: 'p0', target: 'p2' });
+    tick(s);
     expect(s.phase).not.toBe('LOAD');
+    expect(s.players.find(p => p.id === 'p0')!.target).toBe('p2');
   });
 
   it('other players’ aims are hidden until the countdown ends, then all revealed at once', () => {

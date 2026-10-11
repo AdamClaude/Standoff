@@ -243,8 +243,9 @@ export function doPick(v: ClientView, id: string, tray: TrayState) {
     sfx.cash();
     return;
   }
+  // Never block a pick: take it straight away, just say if it does nothing for you.
   const warn = pickWarning(v, id);
-  if (warn && tray.armed !== id) { tray.setArmed(id); api.toast(warn + ' ' + t('tapAgain')); return; }
+  if (warn) api.toast(warn);
   tray.setArmed(null);
   sfx.cash();
   api.act({ type: 'PICK', itemId: id });

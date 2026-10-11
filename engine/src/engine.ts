@@ -364,8 +364,8 @@ function lockLoadAndAim(s: GameState) {
 
 /** Everyone alive has chosen both a bullet and a target: no need to wait for the clock. */
 function maybeLockEarly(s: GameState) {
-  const ready = alive(s).every(p => (p.loaded || p.hand.length === 0) && (p.target !== null || hasPower(s, p, 'KID')));
-  if (ready) lockLoadAndAim(s);
+  // No early lock: everyone keeps the full countdown to read the table and change their mind.
+  void s;
 }
 
 function lockAims(s: GameState) {
@@ -546,6 +546,19 @@ function enterSplit(s: GameState) {
   }
   powers.beforeSplit(s);
   if (splitItems(s).length === 0) return toRoundEnd(s);
+  sweepIfAlone(s);
+}
+
+/** House rule: when only one gangster is left picking, they scoop up everything that's left at once
+ *  (no waiting out a timer item by item, and unwanted items like a spare first-aid kit go with it). */
+function sweepIfAlone(s: GameState) {
+  while (s.phase === 'SPLIT' && !s.pending && activePickers(s).length === 1 && splitItems(s).length > 0) {
+    const pid = activePickers(s)[0];
+    if (currentPicker(s) !== pid) s.splitTurnIndex = s.splitOrder.indexOf(pid);
+    const before = splitItems(s).length;
+    doPick(s, pid, splitItems(s)[0], undefined, true);
+    if (s.phase !== 'SPLIT' || splitItems(s).length >= before) return;
+  }
 }
 
 export function currentPicker(s: GameState): PlayerId | null {
@@ -699,6 +712,7 @@ function autoPick(s: GameState) {
 function endTurn(s: GameState) {
   s.dictate = null;
   if (splitItems(s).length === 0 || activePickers(s).length === 0) return toRoundEnd(s);
+  if (activePickers(s).length === 1) return sweepIfAlone(s);
   // advance to next non-greedy-finished player
   for (let k = 0; k < s.splitOrder.length; k++) {
     s.splitTurnIndex = (s.splitTurnIndex + 1) % s.splitOrder.length;

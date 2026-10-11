@@ -32,7 +32,7 @@ export type TimerKey = Exclude<Phase, 'GAME_OVER'> | 'PENDING';
 
 const NORMAL: Record<TimerKey, number> = {
   LOOT_REVEAL: 8000,   // the loot pours out of the heist bag (see LOOT_REVEAL_MS)
-  LOAD: 12000,      // pick a bullet AND a target, secretly; '3… 2… 1… DRAW!'
+  LOAD: 18000,      // pick a bullet AND a target, secretly; you can change your mind until the count ends
   HOLD_UP: 4500,       // "3… 2… 1… AIM!"
   KID_AIM: 6000,
   CUNNING_SWAP: 6000,
