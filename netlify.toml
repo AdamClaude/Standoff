@@ -6,6 +6,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  VITE_SERVER_URL = "https://standoff-server-lu1l.onrender.com"
 
 # Invite links like /?room=ABC123 and any deep link load the app.
 [[redirects]]

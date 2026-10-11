@@ -39,6 +39,8 @@ export function startServer(opts: ServerOptions = {}) {
   if (staticDir && existsSync(staticDir)) {
     app.use(express.static(staticDir));
     app.get(/^\/(?!api|socket\.io).*/, (_req, res) => res.sendFile(join(staticDir, 'index.html')));
+  } else {
+    app.get('/', (_req, res) => res.type('text').send('STANDOFF game server is running. Play at the Netlify site.'));
   }
 
   function newCode(): string {
