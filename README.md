@@ -18,11 +18,10 @@ npm run build        # builds client/dist
 npm start            # http://localhost:8080
 ```
 
-### Online with friends: Netlify + Render
+### Online with friends: Render (page + server in one)
 
-- **Render** runs the game server from `render.yaml` (New → Blueprint → this repo). Free plan: sleeps after ~15 min idle, wakes in ~1 min.
-- **Netlify** hosts the page from `netlify.toml`. Set the environment variable `VITE_SERVER_URL` to the Render URL (e.g. `https://standoff-server.onrender.com`) and redeploy.
-- Both redeploy automatically on every push to `main`.
+- **Render** builds the page and runs the game server from `render.yaml` (New → Blueprint → this repo) and redeploys on every push to `main`. Free plan: sleeps after ~15 min idle, wakes in ~1 min.
+- `netlify.toml` is kept as an optional alternative host for the page only (it points at the Render server via `VITE_SERVER_URL`).
 
 Docker / Fly.io / Railway / Render: the `Dockerfile` builds one container listening on `$PORT` (default 8080). Use sticky sessions if you run more than one instance (rooms live in memory).
 
